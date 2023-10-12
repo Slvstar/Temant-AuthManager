@@ -1,0 +1,12 @@
+{
+    "name": "temant/auth-manager",
+    "autoload": {
+        "psr-4": {
+            "Temant\\AuthManager\\": "Src/"
+        }
+    },
+    "require": {
+        "temant/session-manager": "*",
+        "temant/database-manager": "*"
+    }
+}
