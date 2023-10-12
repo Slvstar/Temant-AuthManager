@@ -269,7 +269,7 @@ namespace Temant\AuthManager\Auth {
          * @param int $timePeriod Time period in seconds to count failed attempts within.
          * @return int Number of failed login attempts.
          */
-        public function countFailedLoginAttempts($userId, $timePeriod = null): int
+        public function countFailedLoginAttempts(string $userId, int $timePeriod = null): int
         {
             return count($this->storage->getRow('auth_login_attempts', [
                 'user_id' => $this->$userId,
@@ -296,10 +296,8 @@ namespace Temant\AuthManager\Auth {
          */
         public function lockAccount(string $userId): bool
         {
-            if (!$this->isLocked($userId)) {
-                return $this->storage->modifyRow('auth_user', ['is_locked' => true], ['user_id' => $userId]);
-            }
-            return false;
+            return !$this->isLocked($userId)
+                && $this->storage->modifyRow('auth_user', ['is_locked' => true], ['user_id' => $userId]);
         }
 
         /**
@@ -310,10 +308,8 @@ namespace Temant\AuthManager\Auth {
          */
         public function unlockAccount(string $userId): bool
         {
-            if ($this->isLocked($userId)) {
-                return $this->storage->modifyRow('auth_user', ['is_locked' => false], ['user_id' => $userId]);
-            }
-            return false;
+            return $this->isLocked($userId)
+                && $this->storage->modifyRow('auth_user', ['is_locked' => false], ['user_id' => $userId]);
         }
 
         /**
@@ -335,10 +331,8 @@ namespace Temant\AuthManager\Auth {
          */
         public function deactivateAccount(string $userId): bool
         {
-            if (!$this->isLocked($userId)) {
-                return $this->storage->modifyRow('auth_user', ['is_activated' => true], ['user_id' => $userId]);
-            }
-            return false;
+            return !$this->isLocked($userId)
+                && $this->storage->modifyRow('auth_user', ['is_activated' => true], ['user_id' => $userId]);
         }
 
         /**
@@ -349,16 +343,14 @@ namespace Temant\AuthManager\Auth {
          */
         public function activateAccount(string $userId): bool
         {
-            if (!$this->isActivated($userId)) {
-                return $this->storage->modifyRow('auth_user', ['is_activated' => true], ['user_id' => $userId]);
-            }
-            return false;
+            return !$this->isActivated($userId)
+                && $this->storage->modifyRow('auth_user', ['is_activated' => true], ['user_id' => $userId]);
         }
 
-        public function findUserByToken(string $token)
+        public function findUserByToken(string $token): ?array
         {
             [$selector, $validator] = TokenManager::parseToken($token);
-            return $this->storage->getRow('auth_user', ['user_id' => $this->storage->getColumn('auth_token', 'user_id', ['selector' => $selector, 'validator' => $validator,])]);
+            return $this->storage->getRow('auth_user', ['user_id' => $this->storage->getColumn('auth_token', 'user_id', ['selector' => $selector, 'validator' => $validator])]);
         }
 
         /**
@@ -375,7 +367,7 @@ namespace Temant\AuthManager\Auth {
             ]);
 
             // remove the remember_me cookie
-            Cookie::delete('remember_me');
+            Cookie::delete($this->config->get('remember_me_cookie_name'));
 
             // remove all session data
             return $this->session->destroy();
@@ -387,7 +379,7 @@ namespace Temant\AuthManager\Auth {
                 return true;
             }
 
-            $token = filter_input(INPUT_COOKIE, 'remember_me', FILTER_SANITIZE_FULL_SPECIAL_CHARS);
+            $token = filter_input(INPUT_COOKIE, $this->config->get('remember_me_cookie_name'), FILTER_SANITIZE_FULL_SPECIAL_CHARS);
             if ($token && $this->tokenManager->isValid($token)) {
                 $user = $this->findUserByToken($token);
                 if ($user) {
