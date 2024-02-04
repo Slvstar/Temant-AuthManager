@@ -2,41 +2,59 @@
 
 namespace Temant\AuthManager\Utils {
     /**
-     * Cookie Utility Class
+     * Cookie Management Utility Class
      *
-     * This class provides methods for working with cookies.
+     * Offers a comprehensive suite of methods to facilitate the handling of HTTP cookies in a secure and efficient manner. 
+     * This class abstracts away the complexities associated with cookie management, providing straightforward functionalities 
+     * to set, get, check the existence of, and delete cookies with various security options including HttpOnly and Secure flags, 
+     * as well as support for the SameSite attribute to enhance protection against Cross-Site Request Forgery (CSRF) attacks.
      *
-     * @version 1.0.0
-     * @author  Emad Almahdi <emad.storm@gmail.com>
-     * @link    https://github.com/Slvstar/authy
-     * @package Temant\AuthManager\Utils
+     * Key Features:
+     * - Easy setting of cookies with extensive options for path, domain, security, and more.
+     * - Secure retrieval of cookie values, mitigating the risk of unauthorized access.
+     * - Utility functions to check the existence of cookies and delete them, enhancing control over client-side storage.
+     * - Implementation of modern best practices for cookie security, including default support for Secure, HttpOnly, and SameSite attributes.
+     *
+     * Usage:
+     * The class provides static methods that can be invoked without needing to instantiate the class, simplifying its usage in various contexts
+     * within a PHP application. Whether managing user sessions, storing temporary data, or implementing remember-me functionalities,
+     * this utility class serves as a robust foundation for cookie-related operations.
      */
-    class Cookie
+    class Cookie implements CookieInterface
     {
         /**
-         * Set a cookie.
-         *
-         * @param string $name The name of the cookie.
-         * @param string $value The value to store in the cookie.
-         * @param int $expire The expiration time of the cookie (Unix timestamp).
-         * @param string $path The path on the server where the cookie will be available.
-         * @param string $domain The domain on which the cookie will be available.
-         * @param bool $secure Indicates whether the cookie should only be transmitted over HTTPS.
-         * @param bool $httponly Indicates whether the cookie should be accessible only through HTTP.
+         * Sets a cookie with enhanced options.
+         * 
+         * @param string $name Name of the cookie.
+         * @param string $value Cookie value.
+         * @param int $expires Expiration time (Unix timestamp); 0 indicates a session cookie.
+         * @param string $path Path where the cookie is accessible; default is '/' for entire domain.
+         * @param string $domain Domain scope for the cookie; prefix with '.' for subdomains.
+         * @param bool $secure Set true to transmit cookie over HTTPS only.
+         * @param bool $httponly Set true to make cookie HTTP-only, mitigating XSS risk.
+         * @param string $samesite Sets SameSite policy: 'None', 'Lax', or 'Strict'.
          *
          * @return bool True on success, false on failure.
          */
-        public static function set(string $name, string $value, int $expire = 0, string $path = '/', string $domain = '', bool $secure = true, bool $httponly = true): bool
+        public static function set(string $name, string $value, int $expires = 0, string $path = '/', string $domain = '', bool $secure = true, bool $httponly = true, string $samesite = 'Lax'): bool
         {
-            return setcookie($name, $value, $expire, $path, $domain, $secure, $httponly);
+            $options = [
+                'expires' => $expires,
+                'path' => $path,
+                'domain' => $domain,
+                'secure' => $secure,
+                'httponly' => $httponly,
+                'samesite' => $samesite
+            ];
+            return setcookie($name, $value, $options);
         }
 
         /**
-         * Get the value of a cookie.
-         *
+         * Retrieves the value of a specified cookie.
+         * 
          * @param string $name The name of the cookie.
          *
-         * @return ?string The cookie value, or null if the cookie is not set.
+         * @return ?string The value of the cookie if set; otherwise, NULL.
          */
         public static function get(string $name): ?string
         {
@@ -44,11 +62,11 @@ namespace Temant\AuthManager\Utils {
         }
 
         /**
-         * Check if a cookie exists.
+         * Checks whether a specified cookie exists.
+         * 
+         * @param string $name The name of the cookie to check.
          *
-         * @param string $name The name of the cookie.
-         *
-         * @return bool True if the cookie exists, false otherwise.
+         * @return bool TRUE if the cookie exists, otherwise FALSE.
          */
         public static function has(string $name): bool
         {
@@ -56,11 +74,11 @@ namespace Temant\AuthManager\Utils {
         }
 
         /**
-         * Delete a cookie.
-         *
+         * Deletes a specified cookie by setting its expiration time in the past.
+         * 
          * @param string $name The name of the cookie to delete.
          *
-         * @return bool True on successful deletion, false if the cookie doesn't exist.
+         * @return bool TRUE on successful deletion, FALSE if the cookie doesn't exist.
          */
         public static function delete(string $name): bool
         {

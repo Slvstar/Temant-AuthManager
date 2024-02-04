@@ -16,7 +16,7 @@ namespace Temant\AuthManager\Storage {
 
         public function insertRow(string $table, array $data): bool
         {
-            return $this->databaseManager->insert($table, $data);
+            return (bool) $this->databaseManager->insert($table, $data);
         }
 
         public function removeRow(string $table, ?array $conditions = null): bool

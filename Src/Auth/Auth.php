@@ -12,8 +12,6 @@ namespace Temant\AuthManager\Auth {
     {
         private TokenManager $tokenManager;
 
-        private static Auth $_instance;
-
         /**
          * @param SessionInterface $session
          * @param StorageInterface $storage
@@ -25,17 +23,6 @@ namespace Temant\AuthManager\Auth {
             private ConfigInterface $config
         ) {
             $this->tokenManager = new TokenManager($storage);
-            self::$_instance = $this;
-        }
-
-        /**
-         * Gets an instance of the Auth class.
-         * 
-         * @return self
-         */
-        public static function getInstance(): self
-        {
-            return self::$_instance;
         }
 
         /**
