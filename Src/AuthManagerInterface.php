@@ -22,10 +22,9 @@ namespace Temant\AuthManager {
          * Checks whether a specific user is currently authenticated in the system.
          * This can be used to verify a user's login status, typically in session management.
          *
-         * @param string $userId The unique identifier of the user to check.
          * @return bool Returns true if the user is currently authenticated, false otherwise.
          */
-        public function isAuthenticated(string $userId): bool;
+        public function isAuthenticated(): bool;
 
         /**
          * Deauthenticate a user by invalidating their current authentication session or token.
@@ -45,15 +44,17 @@ namespace Temant\AuthManager {
         public function getLastAuthenticationStatus(string $userId);
 
         /**
-         * Records an authentication attempt for a user, including its success or failure.
-         * This is useful for security auditing and tracking login attempts.
+         * Records an authentication attempt for a user, detailing the outcome, reason for failure (if applicable), IP address, and user agent. 
+         * This comprehensive logging is essential for security auditing, tracking login attempts, identifying patterns, and investigating potential breaches.
          *
-         * @param string $userId The unique identifier of the user who is attempting to authenticate.
-         * @param bool $success Indicates whether the authentication attempt was successful or not.
-         * @param string|null $ipAddress Optional. The IP address from which the authentication attempt was made.
-         * @return bool Returns true if the attempt is logged successfully, false otherwise.
+         * @param string $userId The unique identifier of the user attempting to authenticate
+         * @param bool $success Indicates the success or failure of the authentication attempt. True for a successful attempt, false for a failed one.
+         * @param string|null $reason Optional. Describes the reason for the authentication attempt's failure
+         * @param string|null $ipAddress Optional. The IP address from which the authentication attempt originated.
+         * @param string|null $userAgent Optional. Identifies the user agent from which the login attempt was made.
+         * @return bool Returns true if the authentication attempt is successfully logged in the system's storage, false otherwise.
          */
-        public function logAuthenticationAttempt(string $userId, bool $success, ?string $ipAddress = null): bool;
+        public function logAuthenticationAttempt(string $userId, bool $success, ?string $reason = null, ?string $ipAddress = null, ?string $userAgent = null): bool;
 
         /**
          * Counts the number of failed authentication attempts for a specific user within a given time frame.
@@ -186,7 +187,7 @@ namespace Temant\AuthManager {
          * @return bool Returns true if the user's information is successfully updated, false otherwise. A false return value might indicate a validation
          * failure for the provided data, that the user does not exist, or an issue with updating the record in the storage.
          */
-        public function updateUser(string $userId, array $userData): bool; 
+        public function updateUser(string $userId, array $userData): bool;
 
         public function verifyEmail(string $userId, string $selector, string $validator): bool;
     }

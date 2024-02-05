@@ -160,7 +160,7 @@ namespace Temant\AuthManager {
          * @param string $userId The unique identifier of the user to check.
          * @return bool Returns true if the user is currently authenticated, false otherwise.
          */
-        public function isAuthenticated(string $userId): bool
+        public function isAuthenticated(): bool
         {
             if ($this->session->has('user_id')) {
                 return true;
@@ -171,9 +171,9 @@ namespace Temant\AuthManager {
                 $user = $this->findUserByToken($token);
                 if ($user) {
                     $this->session->regenerate();
-                    $this->deleteAuthenticationAttempts($userId);
-                    $this->logAuthenticationAttempt($userId, true);
-                    $this->session->set('user_id', $userId);
+                    $this->deleteAuthenticationAttempts($user['user_id']);
+                    $this->logAuthenticationAttempt($user['user_id'], true);
+                    $this->session->set('user_id', $user['user_id']);
                     return true;
                 }
             }
@@ -218,7 +218,7 @@ namespace Temant\AuthManager {
                 'success' => $success,
                 'reason' => $reason,
                 'ip_address' => Utils::IP(),
-                'user_agent' => $userAgent
+                'user_agent' => is_null($userAgent) ? $_SERVER['HTTP_USER_AGENT'] : $userAgent
             ]);
         }
 
