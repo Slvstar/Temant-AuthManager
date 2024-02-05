@@ -1,7 +1,6 @@
 <?php declare(strict_types=1);
 
 namespace Temant\AuthManager {
-use Temant\AuthManager\Auth\User;
 
     interface AuthManagerInterface
     {
