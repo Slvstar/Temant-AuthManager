@@ -226,12 +226,13 @@ namespace Temant\AuthManager\Auth {
          * @param bool $success Whether the login attempt was successful.
          * @return bool True if the login attempt is logged successfully, false otherwise.
          */
-        public function logLoginAttempt($userId, $success = false): bool
+        public function logLoginAttempt($userId, $success = false, ?string $userAgent = null): bool
         {
             return $this->storage->insertRow('auth_login_attempts', [
                 'user_id' => $userId,
                 'success' => $success,
-                'ip_address' => Utils::IP()
+                'ip_address' => Utils::IP(),
+                'user_agent' => $userAgent
             ]);
         }
 

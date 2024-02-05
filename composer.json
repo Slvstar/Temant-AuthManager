@@ -7,7 +7,9 @@
         }
     },
     "require": {
+        "temant/cookie-manager": "*",
         "temant/session-manager": "*",
-        "temant/database-manager": "*"
+        "temant/database-manager": "*",
+        "symfony/var-dumper": "*"
     }
 }
