@@ -11,5 +11,8 @@
         "temant/session-manager": "*",
         "temant/database-manager": "*",
         "symfony/var-dumper": "*"
+    },
+    "require-dev": {
+        "phpstan/phpstan": "*"
     }
 }

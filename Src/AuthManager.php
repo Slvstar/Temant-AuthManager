@@ -72,19 +72,36 @@ namespace Temant\AuthManager {
             return true; // Login successful
         }
 
-        private function rememberUser($userId)
+        /**
+         * Remembers a user by generating a new remember-me token and storing it.
+         *
+         * This function generates a new remember-me token for the given user ID, removes any existing remember-me tokens
+         * for that user, and stores the new token. It also sets a corresponding cookie in the user's browser to facilitate
+         * automatic login on subsequent visits.
+         *
+         * @param string $userId The unique identifier of the user to remember.
+         * @return void
+         */
+        private function rememberUser(string $userId): void
         {
+            // Generate a new token using the TokenManager
             [$selector, $validator, $token] = TokenManager::generateToken();
-            // remove all existing token associated with the user id
+
+            // Remove all existing tokens associated with the user ID for 'remember_me' type
+            // to prevent multiple valid tokens for the same user
             $this->tokenManager->removeToken([
                 'user_id' => $userId,
                 'type' => 'remember_me'
             ]);
 
-            // set expiration date
+            // Retrieve the token lifetime from configuration, determining how long the token should be valid
             $lifeTime = (int) $this->config->get('remember_me_token_lifetime');
 
+            // Save the new token in the database with the user ID, selector, validator, and its lifetime
             $this->tokenManager->saveToken($userId, $this->config->get('remember_me_cookie_name'), $selector, $validator, $lifeTime);
+
+            // Set a cookie in the user's browser with the token, using the cookie name from configuration
+            // The cookie's expiration is set based on the token's lifetime
             CookieManager::set($this->config->get('remember_me_cookie_name'), $token, time() + 60 * 60 * 24 * $lifeTime);
         }
 
@@ -157,7 +174,6 @@ namespace Temant\AuthManager {
          * Checks whether a specific user is currently authenticated in the system.
          * This can be used to verify a user's login status, typically in session management.
          *
-         * @param string $userId The unique identifier of the user to check.
          * @return bool Returns true if the user is currently authenticated, false otherwise.
          */
         public function isAuthenticated(): bool
