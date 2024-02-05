@@ -196,9 +196,23 @@ namespace Temant\AuthManager {
             return false;
         }
 
+        /**
+         * Finds a user by their remember-me token.
+         *
+         * This function parses the given token to extract the selector and validator components.
+         * It then queries the storage to find a user associated with these token components.
+         * If a matching user is found, their data is returned as an array. If no user is found, null is returned.
+         *
+         * @param string $token The remember-me token associated with a user.
+         * @return ?array An array of user data if a user is found, or null if no user is found.
+         */
         private function findUserByToken(string $token): ?array
         {
+            // Parse the token to extract the selector and validator components
             [$selector, $validator] = TokenManager::parseToken($token);
+
+            // Query the storage to find the user ID associated with the provided selector and validator
+            // Then, retrieve the user's row from the 'auth_user' table using the found user ID
             return $this->storage->getRow('auth_user', ['user_id' => $this->storage->getColumn('auth_token', 'user_id', ['selector' => $selector, 'validator' => $validator])]);
         }
 

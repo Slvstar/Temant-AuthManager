@@ -4,9 +4,6 @@ namespace Temant\AuthManager {
 
     interface AuthManagerInterface
     {
-        ////////////////////////////////////////////////////////////////////
-        ////////////// Authentication Management ///////////////
-        ////////////////////////////////////////////////////////////////////
         /**
          * Authenticates a user by verifying their provided credentials against stored records.
          * This method is typically called during the login process.
@@ -84,9 +81,6 @@ namespace Temant\AuthManager {
          */
         public function listAuthenticationAttempts(string $userId): array;
 
-        ////////////////////////////////////////////////////////////////////
-        /////////////////////// Password Management ////////////////////////
-        ////////////////////////////////////////////////////////////////////
         /**
          * Changes the password for a given user. This method is typically used when a user wants to update their password,
          * often as part of account settings or security measures.
@@ -97,9 +91,6 @@ namespace Temant\AuthManager {
          */
         public function changePassword(string $userId, string $newPassword): bool;
 
-        ////////////////////////////////////////////////////////////////////
-        ///////////////// User Management and Registration /////////////////
-        ////////////////////////////////////////////////////////////////////
         /**
          * Temporarily locks a user's account for a specified duration.
          * This can be used as a security measure after a certain number of failed login attempts or for administrative reasons.
