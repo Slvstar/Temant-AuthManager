@@ -1,10 +1,10 @@
 <?php declare(strict_types=1);
 
-namespace Temant\AuthManager\Auth;
+namespace Temant\AuthManager;
 
 use Temant\AuthManager\Storage\StorageInterface;
 
-class GroupPermissions
+class GroupPermissionsManager
 {
     public function __construct(
         private StorageInterface $storage,
