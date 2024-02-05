@@ -5,7 +5,7 @@ namespace Temant\AuthManager {
     interface AuthManagerInterface
     {
         ////////////////////////////////////////////////////////////////////
-        ////////////// Authentication and Session Management ///////////////
+        ////////////// Authentication Management ///////////////
         ////////////////////////////////////////////////////////////////////
         /**
          * Authenticates a user by verifying their provided credentials against stored records.
