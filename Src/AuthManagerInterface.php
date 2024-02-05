@@ -167,19 +167,6 @@ namespace Temant\AuthManager {
          */
         public function getUser(string $userId);
 
-        /**
-         * Updates an existing user's information in the system.
-         * This method is commonly used to allow users to modify their profile data,
-         * settings, or other relevant information.
-         *
-         * @param string $userId The unique identifier of the user whose information is to be updated.
-         * @param array $userData An associative array containing the user data to be updated. The structure of this array and the fields it contains
-         * will depend on the storage schema and the information that can be updated by the user.
-         * @return bool Returns true if the user's information is successfully updated, false otherwise. A false return value might indicate a validation
-         * failure for the provided data, that the user does not exist, or an issue with updating the record in the storage.
-         */
-        public function updateUser(string $userId, array $userData): bool;
-
         public function verifyEmail(string $userId, string $selector, string $validator): bool;
     }
 }

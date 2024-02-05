@@ -204,7 +204,7 @@ namespace Temant\AuthManager {
          * If a matching user is found, their data is returned as an array. If no user is found, null is returned.
          *
          * @param string $token The remember-me token associated with a user.
-         * @return ?array An array of user data if a user is found, or null if no user is found.
+         * @return mixed[]|null An array of user data if a user is found, or null if no user is found.
          */
         private function findUserByToken(string $token): ?array
         {
@@ -221,7 +221,7 @@ namespace Temant\AuthManager {
          * to analyze user login patterns, or to detect potential security breaches by reviewing suspicious login attempts.
          *
          * @param string $userId The unique identifier of the user whose authentication attempts are to be listed.
-         * @return array An array of authentication attempts, each containing details such as attempt timestamp, success/failure status, and IP address.
+         * @return mixed[] An array of authentication attempts, each containing details such as attempt timestamp, success/failure status, and IP address.
          */
         public function listAuthenticationAttempts(string $userId): array
         {
@@ -431,22 +431,6 @@ namespace Temant\AuthManager {
                 $this->verifyEmail($userId, $selector, $validator);
             }
 
-            return true;
-        }
-
-        /**
-         * Updates an existing user's information in the system.
-         * This method is commonly used to allow users to modify their profile data,
-         * settings, or other relevant information.
-         *
-         * @param string $userId The unique identifier of the user whose information is to be updated.
-         * @param array $userData An associative array containing the user data to be updated. The structure of this array and the fields it contains
-         *                        will depend on the database schema and the information that can be updated by the user.
-         * @return bool Returns true if the user's information is successfully updated, false otherwise. A false return value might indicate a validation
-         *              failure for the provided data, that the user does not exist, or an issue with updating the record in the database.
-         */
-        function updateUser(string $userId, array $userData): bool
-        {
             return true;
         }
 
