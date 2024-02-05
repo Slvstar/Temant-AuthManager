@@ -4,14 +4,33 @@ namespace Temant\AuthManager {
     use Temant\AuthManager\Storage\StorageInterface;
 
     /**
-     * The TokenManager class provides methods for generating, parsing, saving, and validating authentication tokens.
+     * Handles all aspects of authentication token lifecycle management within the system.
+     * 
+     * The TokenManager class is responsible for the creation, storage, retrieval, validation, and deletion of authentication tokens,
+     * offering a secure mechanism to manage user sessions and other forms of token-based authentication. It interfaces with a
+     * storage backend, abstracted through the StorageInterface, to persist token data. This allows for flexible storage implementations
+     * and ensures that the TokenManager can adapt to various storage environments.
+     * 
+     * Key functionalities include:
+     * - Token Generation: Creates unique, secure tokens composed of a selector (for lookup) and a validator (for verification).
+     * - Token Parsing: Extracts the selector and validator from a token string, facilitating validation and other operations.
+     * - Token Storage: Saves tokens with associated user details and expiry information in the storage system.
+     * - Token Retrieval: Fetches tokens from storage based on selectors, ensuring they are still valid (not expired).
+     * - Token Validation: Verifies the authenticity and validity of tokens by comparing provided validators against stored values.
+     * - Token Refresh: Generates a new token while retaining the original selector, extending the validity period without full re-authentication.
+     * - Token Cleanup: Removes expired tokens from storage to maintain database efficiency and security.
+     * 
+     * This class is designed to be flexible and secure, encapsulating the complexities of token management and providing a straightforward
+     * interface for authentication processes within the application.
      */
     class TokenManager
     {
+        private const DAY_IN_SECONDS = 86400; // Represents the number of seconds in a day for token expiry calculation.
+
         /**
-         * TokenManager constructor.
+         * Initializes the TokenManager with a storage mechanism for token persistence.
          *
-         * @param StorageInterface $storage The storage implementation used to store authentication tokens.
+         * @param StorageInterface $storage A storage implementation instance for managing authentication tokens.
          */
         public function __construct(
             private StorageInterface $storage
@@ -19,98 +38,150 @@ namespace Temant\AuthManager {
         }
 
         /**
-         * Generates a new authentication token consisting of a selector and a validator.
+         * Generates a secure, unique authentication token with a selector for identification and a validator for security.
          *
-         * @return array An array containing the selector, validator, and the combined token as elements.
+         * @return array An array containing the selector, the hashed validator, and the full token string.
          */
         public static function generateToken(): array
         {
-            return [
-                $selector = bin2hex(random_bytes(16)),
-                $validator = password_hash(bin2hex(random_bytes(32)), PASSWORD_DEFAULT),
-                "$selector:$validator"
-            ];
+            $selector = bin2hex(random_bytes(16)); // Unique identifier for database lookup.
+            $validator = bin2hex(random_bytes(32)); // Random string for validation.
+            $hashedValidator = password_hash($validator, PASSWORD_DEFAULT); // Securely hashed validator.
+            return [$selector, $hashedValidator, "$selector:" . $validator];
         }
 
         /**
-         * Parses an authentication token into its selector and validator components.
+         * Splits a token into its selector and validator components.
          *
-         * @param string $token The authentication token to be parsed.
-         *
-         * @return ?array An array with two elements (selector and validator) if the token is valid, or null if it cannot be parsed.
+         * @param string $token The full token string to be parsed.
+         * @return ?array An array with selector and validator if the format is correct, null otherwise.
          */
         public static function parseToken(string $token): ?array
         {
             $parts = explode(':', $token);
-
-            return (count($parts) === 2) ? $parts : null;
+            return count($parts) === 2 ? $parts : null; // Validates token format.
         }
 
         /**
-         * Saves an authentication token in the storage.
+         * Persists a token in the storage with its associated user, type, and validity period.
          *
-         * @param string $userId   The user ID associated with the token.
-         * @param string $type     The type of token (e.g., session token, password reset token).
-         * @param string $selector The unique selector for the token.
-         * @param string $validator The token validator.
-         * @param int    $days     (Optional) The number of days for which the token should be valid (default is 1 day).
-         *
-         * @return bool True if the token is successfully saved, false otherwise.
+         * @param string $userId The ID of the user owning the token.
+         * @param string $type The token's purpose, e.g., 'session' or 'reset'.
+         * @param string $selector The token's lookup identifier.
+         * @param string $validator The hashed token validator for security.
+         * @param int $days The token's lifespan in days, defaulting to 1 day.
+         * @return bool True if storage is successful, false otherwise.
          */
         public function saveToken(string $userId, string $type, string $selector, string $validator, int $days = 1): bool
         {
-            return $this->storage
-                ->insertRow('auth_token', [
-                    'user_id' => $userId,
-                    'selector' => $selector,
-                    'validator' => $validator,
-                    'type' => $type,
-                    'expires_at' => date('Y-m-d H:i:s', time() + 60 * 60 * 24 * $days)
-                ]);
+            return $this->storage->insertRow('auth_token', [
+                'user_id' => $userId,
+                'type' => $type,
+                'selector' => $selector,
+                'validator' => $validator,
+                'expires_at' => $this->calculateExpiry($days)
+            ]);
         }
 
         /**
-         * Removes authentication tokens from the storage based on specified conditions.
+         * Removes tokens from the storage based on given conditions, or all tokens if no conditions are specified.
          *
-         * @param ?array $conditions (Optional) Conditions to filter the tokens to be removed (if not provided, all tokens will be removed).
-         *
-         * @return bool True if the tokens are successfully removed, false otherwise.
+         * @param ?array $conditions Optional key-value pairs for filtering tokens to be deleted.
+         * @return bool True if removal is successful, false otherwise.
          */
         public function removeToken(?array $conditions = null): bool
         {
-            return $this->storage->removeRow('auth_token', $conditions);
+            return $this->storage->removeRow('auth_token', $conditions ?: []);
         }
 
         /**
-         * Retrieves an authentication token from the storage based on its selector and checks if it has not expired.
+         * Fetches a token from storage by its selector, ensuring it's still valid (not expired).
          *
-         * @param string $selector The selector used to identify the token.
-         *
-         * @return ?array An array containing the token data if found and not expired, or null otherwise.
+         * @param string $selector The token's unique identifier.
+         * @return ?array Token data if available and valid, null otherwise.
          */
         public function getTokenBySelector(string $selector): ?array
         {
             return $this->storage->getRow('auth_token', [
                 'selector' => $selector,
-                'expires_at' => [date('Y-m-d H:i:s', time()), '>=']
+                'expires_at' => [date('Y-m-d H:i:s'), '>=']
             ]);
         }
 
         /**
-         * Validates if a given authentication token is valid by comparing its validator with the stored validator.
+         * Checks the validity of a token by comparing its provided validator against the stored hashed validator.
          *
-         * @param string $token The authentication token to be validated.
-         *
-         * @return bool True if the token is valid, false otherwise.
+         * @param string $token The token to validate.
+         * @return bool True if valid, false otherwise.
          */
         public function isValid(string $token): bool
         {
-            [$selector, $validator] = TokenManager::parseToken($token);
-            $tokens = $this->getTokenBySelector($selector);
-            if (isset($tokens['validator'])) {
-                return $validator === $tokens['validator'];
+            [$selector, $validator] = self::parseToken($token) ?: ['', ''];
+            $tokenData = $this->getTokenBySelector($selector);
+            return isset($tokenData['validator']) && password_verify($validator, $tokenData['validator']);
+        }
+
+        /**
+         * Refreshes an existing token by generating a new one while retaining the same selector.
+         *
+         * @param string $token The current token to be refreshed.
+         * @param int $days The validity period of the new token in days.
+         * @return ?string The new token if refresh is successful, null otherwise.
+         */
+        public function refreshToken(string $token, int $days = 1): ?string
+        {
+            if (!$this->isValid($token)) {
+                return null;
             }
-            return false;
+
+            [$selector,] = self::parseToken($token);
+            [$newSelector, $newValidator, $newToken] = self::generateToken();
+            if ($this->saveToken($newSelector, 'refresh', $selector, $newValidator, $days)) {
+                return $newToken;
+            }
+
+            return null;
+        }
+
+        /**
+         * Removes all tokens associated with a given user ID, useful for user logout or account deactivation scenarios.
+         *
+         * @param string $userId The ID of the user whose tokens are to be removed.
+         * @return bool True if tokens are successfully removed, false otherwise.
+         */
+        public function removeAllTokensForUser(string $userId): bool
+        {
+            return $this->removeToken(['user_id' => $userId]);
+        }
+
+        /**
+         * Checks if a token is expired based on its expiry date without accessing the database.
+         *
+         * @param string $expiryDate The expiry date of the token in 'Y-m-d H:i:s' format.
+         * @return bool True if the token is expired, false otherwise.
+         */
+        public static function isTokenExpired(string $expiryDate): bool
+        {
+            return strtotime($expiryDate) < time();
+        }
+
+        /**
+         * Calculates the expiry date for a token based on the specified number of days from the current time.
+         *
+         * @param int $days The number of days until the token should expire.
+         * @return string The calculated expiry date in 'Y-m-d H:i:s' format.
+         */
+        private function calculateExpiry(int $days): string
+        {
+            return date('Y-m-d H:i:s', time() + self::DAY_IN_SECONDS * $days);
+        }
+
+        /**
+         * Performs a cleanup operation to remove expired tokens from the storage, optimizing database usage.
+         */
+        public function cleanupExpiredTokens(): void
+        {
+            $this->removeToken(['expires_at' => [date('Y-m-d H:i:s'), '<']]);
         }
     }
 }
