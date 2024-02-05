@@ -23,7 +23,7 @@ namespace Temant\AuthManager {
      * This class is designed to be flexible and secure, encapsulating the complexities of token management and providing a straightforward
      * interface for authentication processes within the application.
      */
-    class TokenManager
+    class TokenManager implements TokenManagerInterface
     {
         private const DAY_IN_SECONDS = 86400; // Represents the number of seconds in a day for token expiry calculation.
 

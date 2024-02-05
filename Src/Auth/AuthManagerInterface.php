@@ -3,63 +3,46 @@
 namespace Temant\AuthManager\Auth {
     use Temant\AuthManager\Auth\Exceptions\AuthException;
 
-    interface AuthInterface
+    interface AuthManagerInterface
     {
         /**
          * Authenticate a user based on their credentials.
          *
-         * @param string $username
+         * @param string $userId
          * @param string $password
+         * @return bool True if authentication succeeds, false otherwise.
          * @return bool True if authentication succeeds, false otherwise.
          * @throws AuthException If authentication encounters an error.
          */
-        public function authenticate(string $username, string $password): bool;
+        public function authenticate(string $userId, string $password, bool $remember = false): bool;
 
         /**
          * Get user data based on their username.
          *
-         * @param string $username
+         * @param string $userId
          * @return array|null User data array or null if not found.
          * @throws AuthException If user retrieval encounters an error.
          */
-        public function getUser($username);
-
-        /**
-         * Generate an authentication token for a user.
-         *
-         * @param string $username User data for which to generate a token.
-         * @return string Generated authentication token.
-         * @throws AuthException If token generation encounters an error.
-         */
-        public function generateToken(string $username): string;
-
-        /**
-         * Validate an authentication token.
-         *
-         * @param string $token Authentication token to validate.
-         * @return bool True if token is valid, false otherwise.
-         * @throws AuthException If token validation encounters an error.
-         */
-        public function validateToken(string $token): bool;
+        public function getUser(string $userId);
 
         /**
          * Logout a user by invalidating their session or token.
          *
-         * @param string $username
+         * @param string $userId
          * @return bool True if logout is successful, false otherwise.
          * @throws AuthException If logout encounters an error.
          */
-        public function logout($username): bool;
+        public function logout(string $userId): bool;
 
         /**
          * Change a user's password.
          *
-         * @param string $username
+         * @param string $userId
          * @param string $newPassword
          * @return bool True if password change is successful, false otherwise.
          * @throws AuthException If password change encounters an error.
          */
-        public function changePassword($username, $newPassword): bool;
+        public function changePassword(string $userId, string $newPassword): bool;
 
         /**
          * Register a new user.
@@ -68,113 +51,113 @@ namespace Temant\AuthManager\Auth {
          * @return bool True if registration is successful, false otherwise.
          * @throws AuthException If registration encounters an error.
          */
-        public function registerUser($userData): bool;
+        public function registerUser(array $userData): bool;
 
         /**
          * Verify a user's email address.
          *
-         * @param string $username
+         * @param string $userId
          * @param string $verificationCode
          * @return bool True if verification is successful, false otherwise.
          * @throws AuthException If verification encounters an error.
          */
-        public function verifyEmail($username, $verificationCode): bool;
+        public function verifyEmail(string $userId, string $verificationCode): bool;
 
         /**
          * Request a password reset for a user.
          *
-         * @param string $username
+         * @param string $userId
          * @return bool True if password reset request is successful, false otherwise.
          * @throws AuthException If password reset request encounters an error.
          */
-        public function requestPasswordReset($username): bool;
+        public function requestPasswordReset(string $userId): bool;
 
         /**
          * Reset a user's password after a password reset request.
          *
-         * @param string $username
+         * @param string $userId
          * @param string $resetToken
          * @param string $newPassword
          * @return bool True if password reset is successful, false otherwise.
          * @throws AuthException If password reset encounters an error.
          */
-        public function resetPassword($username, $resetToken, $newPassword): bool;
+        public function resetPassword(string $userId, string $resetToken, string $newPassword): bool;
 
         /**
          * Check if a user is currently logged in.
          *
-         * @param string $username
+         * @param string $userId
          * @return bool True if the user is logged in, false otherwise.
          * @throws AuthException If the check encounters an error.
          */
-        public function isLoggedIn($username): bool;
+        public function isLoggedIn(string $userId): bool;
 
         /**
          * Update user information.
          *
-         * @param string $username
+         * @param string $userId
          * @param array $userData Updated user data.
          * @return bool True if user information is updated successfully, false otherwise.
          * @throws AuthException If the update encounters an error.
          */
-        public function updateUser($username, $userData): bool;
+        public function updateUser(string $userId, array $userData): bool;
 
         /**
          * Ban or suspend a user.
          *
-         * @param string $username
+         * @param string $userId
          * @param string|null $reason Reason for banning or suspension.
          * @return bool True if user is banned or suspended successfully, false otherwise.
          * @throws AuthException If the action encounters an error.
          */
-        public function banUser(string $username, $reason = null): bool;
+        public function banUser(string $userId, ?string $reason = null): bool;
 
         /**
          * Revoke a user's ban or suspension.
          *
-         * @param string $username
+         * @param string $userId
          * @return bool True if user's ban or suspension is revoked successfully, false otherwise.
          * @throws AuthException If the action encounters an error.
          */
-        public function revokeBan(string $username): bool;
+        public function revokeBan(string $userId): bool;
 
         /**
          * Check if a user is banned or suspended.
          *
-         * @param string $username
+         * @param string $userId
          * @return bool True if user's ban or suspension is revoked successfully, false otherwise.
          * @throws AuthException If the action encounters an error.
          */
-        public function isBanned(string $username): bool;
+        public function isBanned(string $userId): bool;
 
         /**
          * Get user roles and permissions.
          *
-         * @param string $username
+         * @param string $userId
          * @return array|null Associative array containing roles and permissions or null if not found.
          * @throws AuthException If retrieval encounters an error.
          */
-        public function getUserRolesAndPermissions(string $username);
+        public function getUserRolesAndPermissions(string $userId);
 
         /**
          * Grant a role to a user.
          *
-         * @param string $username
+         * @param string $userId
          * @param string $role
          * @return bool True if the role is granted successfully, false otherwise.
          * @throws AuthException If the action encounters an error.
          */
-        public function grantUserRole(string $username, string $role): bool;
+        public function grantUserRole(string $userId, string $role): bool;
 
         /**
          * Revoke a role from a user.
          *
-         * @param string $username
+         * @param string $userId
          * @param string $role
          * @return bool True if the role is revoked successfully, false otherwise.
          * @throws AuthException If the action encounters an error.
          */
-        public function revokeUserRole(string $username, string $role): bool;
+        public function revokeUserRole(string $userId, string $role): bool;
 
         /**
          * Create a new role.
@@ -183,7 +166,7 @@ namespace Temant\AuthManager\Auth {
          * @return bool True if the role is created successfully, false otherwise.
          * @throws AuthException If creation encounters an error.
          */
-        public function createRole($roleName): bool;
+        public function createRole(string $roleName): bool;
 
         /**
          * Delete an existing role.
@@ -192,7 +175,7 @@ namespace Temant\AuthManager\Auth {
          * @return bool True if the role is deleted successfully, false otherwise.
          * @throws AuthException If deletion encounters an error.
          */
-        public function deleteRole($roleName): bool;
+        public function deleteRole(string $roleName): bool;
 
         /**
          * Assign permissions to a role.
@@ -202,7 +185,7 @@ namespace Temant\AuthManager\Auth {
          * @return bool True if permissions are assigned successfully, false otherwise.
          * @throws AuthException If assignment encounters an error.
          */
-        public function assignPermissionsToRole($roleName, $permissions): bool;
+        public function assignPermissionsToRole(string $roleName, array $permissions): bool;
 
         /**
          * Revoke permissions from a role.
@@ -212,17 +195,17 @@ namespace Temant\AuthManager\Auth {
          * @return bool True if permissions are revoked successfully, false otherwise.
          * @throws AuthException If revocation encounters an error.
          */
-        public function revokePermissionsFromRole($roleName, $permissions): bool;
+        public function revokePermissionsFromRole(string $roleName, array $permissions): bool;
 
         /**
          * Check if a user has a specific permission.
          *
-         * @param string $username
+         * @param string $userId
          * @param string $permission
          * @return bool True if the user has the permission, false otherwise.
          * @throws AuthException If the check encounters an error.
          */
-        public function hasPermission($username, $permission): bool;
+        public function hasPermission(string $userId, string $permission): bool;
 
         /**
          * Get all available roles.
@@ -243,51 +226,51 @@ namespace Temant\AuthManager\Auth {
         /**
          * Lock a user's account to prevent login attempts.
          *
-         * @param string $username
+         * @param string $userId
          * @param int $lockDuration Duration of the lock in seconds.
          * @return bool True if the account is locked successfully, false otherwise.
          * @throws AuthException If locking encounters an error.
          */
-        public function lockAccount($username, $lockDuration): bool;
+        public function lockAccount(string $userId, int $lockDuration): bool;
 
         /**
          * Unlock a previously locked user account.
          *
-         * @param string $username
+         * @param string $userId
          * @return bool True if the account is unlocked successfully, false otherwise.
          * @throws AuthException If unlocking encounters an error.
          */
-        public function unlockAccount($username): bool;
+        public function unlockAccount(string $userId): bool;
 
         /**
          * Log a user's login attempt.
          *
-         * @param string $username
+         * @param string $userId
          * @param bool $success Whether the login attempt was successful.
          * @param string|null $ipAddress IP address of the login attempt.
          * @return bool True if the login attempt is logged successfully, false otherwise.
          * @throws AuthException If logging encounters an error.
          */
-        public function logLoginAttempt($username, $success, $ipAddress = null): bool;
+        public function logLoginAttempt(string $userId, bool $success, $ipAddress = null): bool;
 
         /**
          * Get the last login attempt status for a user.
          *
-         * @param string $username
+         * @param string $userId
          * @return bool|null True if the last login was successful, false if failed, null if not found.
          * @throws AuthException If retrieval encounters an error.
          */
-        public function getLastLoginStatus($username);
+        public function getLastLoginStatus(string $userId);
 
         /**
          * Count failed login attempts for a user within a specified period.
          *
-         * @param string $username
+         * @param string $userId
          * @param int $timePeriod Time period in seconds to count failed attempts within.
          * @return int Number of failed login attempts.
          * @throws AuthException If counting encounters an error.
          */
-        public function countFailedLoginAttempts($username, $timePeriod): int;
+        public function countFailedLoginAttempts(string $userId, $timePeriod): int;
 
         /**
          * Hash a password securely.

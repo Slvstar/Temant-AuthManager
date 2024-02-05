@@ -3,22 +3,22 @@
 namespace Temant\AuthManager\Auth {
     use Temant\AuthManager\Config\ConfigInterface;
     use Temant\AuthManager\Storage\StorageInterface;
-    use Temant\AuthManager\TokenManager; 
+    use Temant\AuthManager\TokenManager;
     use Temant\AuthManager\Utils\Utils;
     use Temant\CookieManager\CookieManager;
-    use Temant\SessionManager\SessionInterface;
+    use Temant\SessionManager\SessionManagerInterface;
 
     class Auth
     {
         private TokenManager $tokenManager;
 
         /**
-         * @param SessionInterface $session
+         * @param SessionManagerInterface $session
          * @param StorageInterface $storage
          * @param ConfigInterface $config
          */
         public function __construct(
-            private SessionInterface $session,
+            private SessionManagerInterface $session,
             private StorageInterface $storage,
             private ConfigInterface $config
         ) {
@@ -37,21 +37,36 @@ namespace Temant\AuthManager\Auth {
         {
             $user = $this->getUser($userId);
 
-            // if user found, check the password
-            if ($user && $this->isActivated($userId) && password_verify($password, $user->getPassword())) {
-                $this->session->regenerate();
-                $this->deleteLoginAttempts($userId);
-                $this->logLoginAttempt($userId, true);
-                $this->session->set('user_id', $userId);
-
-                if ($remember) {
-                    $this->rememberUser($userId);
-                }
-
-                return true;
+            // Check if user exists
+            if (!$user) {
+                $this->logLoginAttempt($userId, false, 'User not found');
+                return false;
             }
-            $this->logLoginAttempt($userId, false);
-            return false;
+
+            // Check if user is activated
+            if (!$this->isActivated($userId)) {
+                $this->logLoginAttempt($userId, false, 'User not activated');
+                return false;
+            }
+
+            // Check if password is correct
+            if (!$this->checkPassword($userId, $password)) {
+                $this->logLoginAttempt($userId, false, 'Wrong password');
+                return false;
+            }
+
+            // At this point, all checks have passed
+            $this->session->regenerate();
+            $this->deleteLoginAttempts($userId); // Assumes functionality to delete previous failed login attempts, if any
+            $this->logLoginAttempt($userId, true); // Log successful login attempt
+            $this->session->set('user_id', $userId); // Set user session
+
+            // Handle "remember me" functionality, if requested
+            if ($remember) {
+                $this->rememberUser($userId); // Assumes functionality to remember the user for future logins
+            }
+
+            return true; // Login successful
         }
 
         /**
@@ -148,18 +163,6 @@ namespace Temant\AuthManager\Auth {
         }
 
         /**
-         * Verify a password against its hashed version.
-         * 
-         * @param string $password The plain text password that needs to be verified.
-         * @param string $hashedPassword The hashed password to compare against
-         * @return bool True is the password matches, false otherwise
-         */
-        private function verifyPassword(string $password, string $hashedPassword): bool
-        {
-            return password_verify($password, $hashedPassword);
-        }
-
-        /**
          * Checks if a given password matches the stored password for a given user ID.
          * 
          * @param string $userId
@@ -168,12 +171,12 @@ namespace Temant\AuthManager\Auth {
          */
         private function checkPassword(string $userId, string $password): bool
         {
-            $storedPassword = $this->storage->getColumn('auth_user', 'password', ['user_id' => $userId]);
-            if ($this->needsRehash($storedPassword)) {
-                $this->updatePassword($userId, $storedPassword);
-                $storedPassword = $this->storage->getColumn('auth_user', 'password', ['user_id' => $userId]);
+            $hashedPassword = $this->storage->getColumn('auth_user', 'password', ['user_id' => $userId]);
+            if ($this->needsRehash($hashedPassword)) {
+                $this->updatePassword($userId, $hashedPassword);
+                $hashedPassword = $this->storage->getColumn('auth_user', 'password', ['user_id' => $userId]);
             }
-            return $this->verifyPassword($password, $storedPassword);
+            return password_verify($password, $hashedPassword);
         }
 
         /**
@@ -223,24 +226,31 @@ namespace Temant\AuthManager\Auth {
          * Log a user's login attempt.
          *
          * @param string $userId
-         * @param bool $success Whether the login attempt was successful.
+         * @param bool $success Whether the login attempt was successful. 
          * @return bool True if the login attempt is logged successfully, false otherwise.
          */
-        public function logLoginAttempt($userId, $success = false, ?string $userAgent = null): bool
+        public function logLoginAttempt($userId, $success = false, ?string $reason = null, ?string $userAgent = null): bool
         {
             return $this->storage->insertRow('auth_login_attempts', [
                 'user_id' => $userId,
                 'success' => $success,
+                'reason' => $reason,
                 'ip_address' => Utils::IP(),
                 'user_agent' => $userAgent
+            ]);
+        }
+
+        public function listLoginAttempts(string $userId): array
+        {
+            return $this->storage->getRows('auth_login_attempts', [
+                'user_id' => $userId
             ]);
         }
 
         /**
          * Log a user's login attempt.
          *
-         * @param string $userId
-         * @param bool $success Whether the login attempt was successful.
+         * @param string $userId 
          * @return bool True if the login attempt is logged successfully, false otherwise.
          */
         public function deleteLoginAttempts($userId): bool
