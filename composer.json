@@ -10,7 +10,10 @@
         "temant/cookie-manager": "*",
         "temant/session-manager": "*",
         "temant/database-manager": "*",
-        "symfony/var-dumper": "*"
+        "symfony/var-dumper": "*",
+        "doctrine/orm": "*",
+        "doctrine/dbal": "*",
+        "symfony/cache": "*"
     },
     "require-dev": {
         "phpstan/phpstan": "*"

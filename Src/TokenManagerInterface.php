@@ -1,87 +1,97 @@
 <?php declare(strict_types=1);
 
 namespace Temant\AuthManager {
+    use DateInterval;
+    use DateTime;
+    use Doctrine\DBAL\Types\Types;
+    use Doctrine\ORM\EntityManagerInterface;
+    use Temant\AuthManager\Entity\TokenEntity;
 
     interface TokenManagerInterface
     {
         /**
-         * Generates a secure, unique authentication token with a selector for identification and a validator for security.
+         * Generates a secure, unique authentication token,
+         * consisting of a selector for identification and a hashed validator for verification.
          *
-         * @return string[] An array containing the selector, the hashed validator, and the full token string.
+         * @return string[] An array containing the selector, hashed validator, and the full token string.
          */
         public static function generateToken(): array;
 
         /**
-         * Splits a token into its selector and validator components.
+         * Decomposes a token into its constituent selector and validator components.
          *
-         * @param string $token The full token string to be parsed.
-         * @return string[]|null An array with selector and validator if the format is correct, null otherwise.
+         * @param string $token The complete token string to be dissected.
+         * @return string[]|null An array containing the selector and validator, or null if the format is incorrect.
          */
         public static function parseToken(string $token): ?array;
 
         /**
-         * Persists a token in the storage with its associated user, type, and validity period.
+         * Stores a token in the database along with associated user information and expiration details.
          *
-         * @param string $userId The ID of the user owning the token.
-         * @param string $type The token's purpose, e.g., 'session' or 'reset'.
-         * @param string $selector The token's lookup identifier.
-         * @param string $validator The hashed token validator for security.
-         * @param int $days The token's lifespan in days, defaulting to 1 day.
-         * @return bool True if storage is successful, false otherwise.
+         * @param string $userId Identifier of the user associated with the token.
+         * @param string $type Purpose of the token (e.g., 'session', 'reset').
+         * @param string $selector Token's unique identifier for lookup.
+         * @param string $validator Hashed validator part of the token for security.
+         * @param int $days Lifespan of the token in days, defaults to 1 day.
+         * @return bool Returns true upon successful storage, otherwise false.
          */
         public function saveToken(string $userId, string $type, string $selector, string $validator, int $days = 1): bool;
 
         /**
-         * Removes tokens from the storage based on given conditions, or all tokens if no conditions are specified.
+         * Deletes tokens from the database based on specified conditions or all tokens if no conditions are provided.
          *
-         * @param array<string, mixed>|null $conditions Optional key-value pairs for filtering tokens to be deleted.
-         * @return bool True if removal is successful, false otherwise.
+         * @param array<string, mixed> $conditions Key-value pairs for filtering which tokens to delete.
+         * @return int Number of tokens deleted.
          */
-        public function removeToken(?array $conditions = null): bool;
+        public function removeToken(array $conditions): int;
+
 
         /**
-         * Fetches a token from storage by its selector, ensuring it's still valid (not expired).
+         * Retrieves a token from the database using its selector, verifying that it hasn't expired.
          *
-         * @param string $selector The token's unique identifier.
-         * @return string[]|null Token data if available and valid, null otherwise.
+         * @param string $selector Unique identifier of the token.
+         * @return string[]|null Returns token data if found and valid, otherwise null.
          */
         public function getTokenBySelector(string $selector): ?array;
 
         /**
-         * Checks the validity of a token by comparing its provided validator against the stored hashed validator.
+         * Validates a token by matching the provided validator against the stored hashed validator.
          *
          * @param string $token The token to validate.
-         * @return bool True if valid, false otherwise.
+         * @return bool Returns true if the token is valid, otherwise false.
          */
         public function isValid(string $token): bool;
+
         /**
-         * Refreshes an existing token by generating a new one while retaining the same selector.
+         * Creates a new token while keeping the same selector, effectively refreshing the token's lifespan.
          *
-         * @param string $token The current token to be refreshed.
-         * @param int $days The validity period of the new token in days.
-         * @return ?string The new token if refresh is successful, null otherwise.
+         * @param string $token Existing token to refresh.
+         * @param int $days Number of days for the new token's validity.
+         * @return ?string Returns the new token if successful, otherwise null.
          */
         public function refreshToken(string $token, int $days = 1): ?string;
 
         /**
-         * Removes all tokens associated with a given user ID, useful for user logout or account deactivation scenarios.
+         * Deletes all tokens associated with a specific user ID, commonly used for logging out or account deactivation.
          *
-         * @param string $userId The ID of the user whose tokens are to be removed.
-         * @return bool True if tokens are successfully removed, false otherwise.
+         * @param string $userId User ID whose tokens are to be deleted.
+         * @return int Number of tokens deleted.
          */
-        public function removeAllTokensForUser(string $userId): bool;
+        public function removeAllTokensForUser(string $userId): int;
 
         /**
-         * Checks if a token is expired based on its expiry date without accessing the database.
+         * Determines if a token is expired based on its stored expiry date.
          *
-         * @param string $expiryDate The expiry date of the token in 'Y-m-d H:i:s' format.
-         * @return bool True if the token is expired, false otherwise.
+         * @param string $expiryDate Token's expiry date in 'Y-m-d H:i:s' format.
+         * @return bool Returns true if the token is expired, otherwise false.
          */
         public static function isTokenExpired(string $expiryDate): bool;
 
         /**
-         * Performs a cleanup operation to remove expired tokens from the storage, optimizing database usage.
+         * Removes expired tokens from the database to maintain efficiency and security.
+         *
+         * @return int Number of tokens deleted.
          */
-        public function cleanupExpiredTokens(): void;
+        public function cleanupExpiredTokens(): int;
     }
 }
