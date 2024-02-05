@@ -77,7 +77,7 @@ namespace Temant\AuthManager {
          * to analyze user login patterns, or to detect potential security breaches by reviewing suspicious login attempts.
          *
          * @param string $userId The unique identifier of the user whose authentication attempts are to be listed.
-         * @return array An array of authentication attempts, each containing details such as attempt timestamp, success/failure status, and IP address.
+         * @return mixed[] An array of authentication attempts, each containing details such as attempt timestamp, success/failure status, and IP address.
          */
         public function listAuthenticationAttempts(string $userId): array;
 
@@ -167,6 +167,19 @@ namespace Temant\AuthManager {
          */
         public function getUser(string $userId);
 
+        /**
+         * Verifies a user's email using a token composed of a selector and a validator.
+         *
+         * This function is typically used in the process of email verification, where a user is sent an email
+         * containing a link with a token. The token is split into a selector and a validator. The selector is used
+         * to locate the token in the database, and the validator is used to verify the token's authenticity.
+         * If the token is valid and matches the user's token, the user's email is considered verified.
+         *
+         * @param string $userId The unique identifier of the user whose email is being verified.
+         * @param string $selector The selector part of the token, used to locate the token record in the database.
+         * @param string $validator The validator part of the token, used to verify the token's authenticity.
+         * @return bool True if the email is successfully verified, false otherwise.
+         */
         public function verifyEmail(string $userId, string $selector, string $validator): bool;
     }
 }

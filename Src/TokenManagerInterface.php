@@ -7,7 +7,7 @@ namespace Temant\AuthManager {
         /**
          * Generates a secure, unique authentication token with a selector for identification and a validator for security.
          *
-         * @return array An array containing the selector, the hashed validator, and the full token string.
+         * @return string[] An array containing the selector, the hashed validator, and the full token string.
          */
         public static function generateToken(): array;
 
@@ -15,7 +15,7 @@ namespace Temant\AuthManager {
          * Splits a token into its selector and validator components.
          *
          * @param string $token The full token string to be parsed.
-         * @return ?array An array with selector and validator if the format is correct, null otherwise.
+         * @return string[]|null An array with selector and validator if the format is correct, null otherwise.
          */
         public static function parseToken(string $token): ?array;
 
@@ -34,7 +34,7 @@ namespace Temant\AuthManager {
         /**
          * Removes tokens from the storage based on given conditions, or all tokens if no conditions are specified.
          *
-         * @param ?array $conditions Optional key-value pairs for filtering tokens to be deleted.
+         * @param array<string, mixed>|null $conditions Optional key-value pairs for filtering tokens to be deleted.
          * @return bool True if removal is successful, false otherwise.
          */
         public function removeToken(?array $conditions = null): bool;
@@ -43,7 +43,7 @@ namespace Temant\AuthManager {
          * Fetches a token from storage by its selector, ensuring it's still valid (not expired).
          *
          * @param string $selector The token's unique identifier.
-         * @return ?array Token data if available and valid, null otherwise.
+         * @return string[]|null Token data if available and valid, null otherwise.
          */
         public function getTokenBySelector(string $selector): ?array;
 
