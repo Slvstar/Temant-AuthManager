@@ -3,9 +3,9 @@
 namespace Temant\AuthManager\Auth {
     use Temant\AuthManager\Config\ConfigInterface;
     use Temant\AuthManager\Storage\StorageInterface;
-    use Temant\AuthManager\TokenManager;
-    use Temant\AuthManager\Utils\Cookie;
+    use Temant\AuthManager\TokenManager; 
     use Temant\AuthManager\Utils\Utils;
+    use Temant\CookieManager\CookieManager;
     use Temant\SessionManager\SessionInterface;
 
     class Auth
@@ -216,7 +216,7 @@ namespace Temant\AuthManager\Auth {
             $lifeTime = (int) $this->config->get('remember_me_token_lifetime');
 
             $this->tokenManager->saveToken($userId, $this->config->get('remember_me_cookie_name'), $selector, $validator, $lifeTime);
-            Cookie::set($this->config->get('remember_me_cookie_name'), $token, time() + 60 * 60 * 24 * $lifeTime);
+            CookieManager::set($this->config->get('remember_me_cookie_name'), $token, time() + 60 * 60 * 24 * $lifeTime);
         }
 
         /**
@@ -355,7 +355,7 @@ namespace Temant\AuthManager\Auth {
             ]);
 
             // remove the remember_me cookie
-            Cookie::delete($this->config->get('remember_me_cookie_name'));
+            CookieManager::delete($this->config->get('remember_me_cookie_name'));
 
             // remove all session data
             return $this->session->destroy();
