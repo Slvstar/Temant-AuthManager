@@ -41,126 +41,71 @@ namespace Temant\AuthManager\Entity {
             $this->createdAt = new DateTime();
         }
 
-        /**
-         * @return int
-         */
         public function getId(): int
         {
             return $this->id;
         }
 
-        /**
-         * @param int $id 
-         * @return self
-         */
-        public function setId(int $id): self
-        {
-            $this->id = $id;
-            return $this;
-        }
-
-        /**
-         * @return 
-         */
         public function getUserId(): ?string
         {
             return $this->userId;
         }
 
-        /**
-         * @param  $userId 
-         * @return self
-         */
         public function setUserId(?string $userId): self
         {
             $this->userId = $userId;
             return $this;
         }
 
-        /**
-         * @return 
-         */
         public function getSelector(): ?string
         {
             return $this->selector;
         }
 
-        /**
-         * @param  $selector 
-         * @return self
-         */
         public function setSelector(?string $selector): self
         {
             $this->selector = $selector;
             return $this;
         }
 
-        /**
-         * @return 
-         */
         public function getValidator(): ?string
         {
             return $this->validator;
         }
 
-        /**
-         * @param  $validator 
-         * @return self
-         */
         public function setValidator(?string $validator): self
         {
             $this->validator = $validator;
             return $this;
         }
 
-        /**
-         * @return 
-         */
         public function getType(): ?string
         {
             return $this->type;
         }
 
-        /**
-         * @param  $type 
-         * @return self
-         */
         public function setType(?string $type): self
         {
             $this->type = $type;
             return $this;
         }
 
-        /**
-         * @return 
-         */
         public function getExpiresAt(): ?DateTime
         {
             return $this->expiresAt;
         }
 
-        /**
-         * @param  $expiresAt 
-         * @return self
-         */
         public function setExpiresAt(?DateTime $expiresAt): self
         {
             $this->expiresAt = $expiresAt;
             return $this;
         }
 
-        /**
-         * @return DateTime
-         */
         public function getCreatedAt(): DateTime
         {
             return $this->createdAt;
         }
 
-        /**
-         * @param DateTime $createdAt 
-         * @return self
-         */
         public function setCreatedAt(DateTime $createdAt): self
         {
             $this->createdAt = $createdAt;

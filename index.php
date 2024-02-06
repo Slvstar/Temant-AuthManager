@@ -21,7 +21,7 @@ $connection = DriverManager::getConnection([
     'driver' => 'pdo_mysql',
     'user' => 'intradb',
     'password' => 'Proto!728agt22Ws',
-    'dbname' => 'intradb',
+    'dbname' => 'slim',
 ], $config);
 
 // obtaining the entity manager
@@ -30,9 +30,9 @@ $entityManager = new EntityManager($connection, $config);
 
 $tokenManager = new TokenManager($entityManager);
 
-//dd($tokenManager->removeAllTokensForUser('Test'));
-//dd($tokenManager->saveToken('Test', 'Test', 'Test', 'Test'));
-//dd($tokenManager->cleanupExpiredTokens());
+// dd($tokenManager->removeAllTokensForUser('Doctrine'));
+// dd($tokenManager->saveToken('Test', 'Test', 'Test', 'Test'));
+// dd($tokenManager->cleanupExpiredTokens());
 
 
 
