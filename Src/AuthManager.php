@@ -218,7 +218,7 @@ namespace Temant\AuthManager {
 
             // Query the storage to find the user ID associated with the provided selector and validator
             // Then, retrieve the user's row from the 'auth_user' table using the found user ID
-            return $this->storage->getRow(self::TBL_AUTH_USER, ['user_id' => $this->storage->getColumn('auth_token', 'user_id', ['selector' => $selector, 'validator' => $validator])]);
+            return $this->storage->getRow(self::TBL_AUTH_USER, ['user_id' => $this->storage->getColumn('authentication_tokens', 'user_id', ['selector' => $selector, 'validator' => $validator])]);
         }
 
         /**

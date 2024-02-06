@@ -101,24 +101,16 @@ namespace Temant\AuthManager {
 
 
         /**
-         * Retrieves a token from the database using its selector, verifying that it hasn't expired.
+         * Retrieves a token from the database using its selector.
          *
          * @param string $selector Unique identifier of the token.
          * @return string[]|null Returns token data if found and valid, otherwise null.
          */
         public function getTokenBySelector(string $selector): ?array
         {
-            $query = $this->entityManager
-                ->createQueryBuilder()
-                ->select('t')
-                ->from(Token::class, 't')
-                ->where('t.selector = :selector')
-                ->andWhere('t.expiresAt >= :currentDateTime')
-                ->setParameter('selector', $selector)
-                ->setParameter('currentDateTime', new DateTime(), Types::DATETIME_MUTABLE)
-                ->getQuery();
-
-            $token = $query->getOneOrNullResult();
+            $token = $this->entityManager
+                ->getRepository(Token::class)
+                ->findOneBy(['selector' => $selector]);
 
             if ($token) {
                 return [
@@ -160,6 +152,23 @@ namespace Temant\AuthManager {
             if ($this->saveToken($newSelector, 'refresh', $selector, $newValidator, $days)) {
                 return $newToken;
             }
+
+            return null;
+        }
+
+        public function listExpiredTokens(): ?Token
+        {
+            $token = (new Token)
+                ->setUserId('$userId')
+                ->setType('$type')
+                ->setSelector('$selector')
+                ->setValidator('$validator');
+
+            dump($this->entityManager->getRepository(Token::class)->findBySelector('1111'));
+            dump($this->entityManager->getRepository(Token::class)->findByUser('Emad.A'));
+            dump($this->entityManager->getRepository(Token::class)->findByType('remember_me'));
+            dump($this->entityManager->getRepository(Token::class)->findByUserAndType('Emad.A', 'remember_me'));
+            dump($this->entityManager->getRepository(Token::class)->saveToken($token));
 
             return null;
         }

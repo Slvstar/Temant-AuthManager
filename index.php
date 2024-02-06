@@ -28,18 +28,13 @@ $connection = DriverManager::getConnection([
 $entityManager = new EntityManager($connection, $config);
 
 
-// dd($entityManager->getRepository(Config::class)->findAll());
+$tokenManager = new TokenManager($entityManager);
+
+dd($tokenManager->listExpiredTokens());
 
 
-// $tokenManager = new TokenManager($entityManager);
-
-
-// foreach ($tokenManager->listAllTokensForUser('Test') as $key => $value) {
-//     dump($value->getCreatedAt());
-// }
-// exit;
-// dd($tokenManager->saveToken('Test', 'Test', 'Test', 'Test'));
-// // dd($tokenManager->cleanupExpiredTokens());
+dd($tokenManager->saveToken('Test', 'Test', 'Test', 'Test'));
+dd($tokenManager->cleanupExpiredTokens());
 
 
 
