@@ -11,7 +11,7 @@ namespace Temant\AuthManager\Entity {
 
     #[Entity]
     #[Table(name: "auth_token")]
-    class TokenEntity
+    class Token
     {
         #[Id]
         #[GeneratedValue]

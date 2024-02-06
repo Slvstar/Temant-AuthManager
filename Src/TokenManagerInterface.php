@@ -5,7 +5,7 @@ namespace Temant\AuthManager {
     use DateTime;
     use Doctrine\DBAL\Types\Types;
     use Doctrine\ORM\EntityManagerInterface;
-    use Temant\AuthManager\Entity\TokenEntity;
+    use Temant\AuthManager\Entity\Token;
 
     interface TokenManagerInterface
     {
@@ -75,7 +75,7 @@ namespace Temant\AuthManager {
          * List all tokens associated with a specific user ID.
          *
          * @param string $userId User ID whose tokens are to be listed.
-         * @return TokenEntity[] A list of tokens or empty array
+         * @return Token[] A list of tokens or empty array
          */
         public function listAllTokensForUser(string $userId): array;
 

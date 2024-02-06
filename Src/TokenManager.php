@@ -5,7 +5,7 @@ namespace Temant\AuthManager {
     use DateTime;
     use Doctrine\DBAL\Types\Types;
     use Doctrine\ORM\EntityManagerInterface;
-    use Temant\AuthManager\Entity\TokenEntity;
+    use Temant\AuthManager\Entity\Token;
 
     /**
      * Manages authentication tokens throughout their lifecycle, including creation, storage, retrieval, validation, and deletion.
@@ -66,7 +66,7 @@ namespace Temant\AuthManager {
          */
         public function saveToken(string $userId, string $type, string $selector, string $validator, int $days = 1): bool
         {
-            $token = (new TokenEntity())
+            $token = (new Token())
                 ->setUserId($userId)
                 ->setType($type)
                 ->setSelector($selector)
@@ -89,7 +89,7 @@ namespace Temant\AuthManager {
         {
             $query = $this->entityManager
                 ->createQueryBuilder()
-                ->delete(TokenEntity::class, 't');
+                ->delete(Token::class, 't');
 
             foreach ($conditions as $field => $value) {
                 $query->andWhere("t.$field = :$field")
@@ -111,7 +111,7 @@ namespace Temant\AuthManager {
             $query = $this->entityManager
                 ->createQueryBuilder()
                 ->select('t')
-                ->from(TokenEntity::class, 't')
+                ->from(Token::class, 't')
                 ->where('t.selector = :selector')
                 ->andWhere('t.expiresAt >= :currentDateTime')
                 ->setParameter('selector', $selector)
@@ -174,7 +174,7 @@ namespace Temant\AuthManager {
         {
             return $this->entityManager
                 ->createQueryBuilder()
-                ->delete(TokenEntity::class, 't')
+                ->delete(Token::class, 't')
                 ->where('t.userId = :userId')
                 ->setParameter('userId', $userId)
                 ->getQuery()
@@ -185,14 +185,14 @@ namespace Temant\AuthManager {
          * List all tokens associated with a specific user ID.
          *
          * @param string $userId User ID whose tokens are to be listed.
-         * @return TokenEntity[] A list of tokens or empty array
+         * @return Token[] A list of tokens or empty array
          */
         public function listAllTokensForUser(string $userId): array
         {
             return $this->entityManager
                 ->createQueryBuilder()
                 ->select('t')
-                ->from(TokenEntity::class, 't')
+                ->from(Token::class, 't')
                 ->where('t.userId = :userId')
                 ->setParameter('userId', $userId)
                 ->getQuery()
@@ -219,7 +219,7 @@ namespace Temant\AuthManager {
         {
             return $this->entityManager
                 ->createQueryBuilder()
-                ->delete(TokenEntity::class, 't')
+                ->delete(Token::class, 't')
                 ->where('t.expiresAt < :currentDateTime')
                 ->setParameter('currentDateTime', new DateTime(), Types::DATETIME_MUTABLE)
                 ->getQuery()
