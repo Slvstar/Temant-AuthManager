@@ -60,16 +60,7 @@ namespace Temant\AuthManager {
          * @param string $token The token to validate.
          * @return bool Returns true if the token is valid, otherwise false.
          */
-        public function isValid(string $token): bool;
-
-        /**
-         * Creates a new token while keeping the same selector, effectively refreshing the token's lifespan.
-         *
-         * @param string $token Existing token to refresh.
-         * @param int $days Number of days for the new token's validity.
-         * @return ?string Returns the new token if successful, otherwise null.
-         */
-        public function refreshToken(string $token, int $days = 1): ?string;
+        public function isValid(string $token): bool; 
 
         /**
          * List all tokens associated with a specific user ID.

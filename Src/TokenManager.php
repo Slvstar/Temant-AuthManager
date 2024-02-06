@@ -135,28 +135,6 @@ namespace Temant\AuthManager {
             return isset($tokenData['validator']) && password_verify($validator, $tokenData['validator']);
         }
 
-        /**
-         * Creates a new token while keeping the same selector, effectively refreshing the token's lifespan.
-         *
-         * @param string $token Existing token to refresh.
-         * @param int $days Number of days for the new token's validity.
-         * @return ?string Returns the new token if successful, otherwise null.
-         */
-        public function refreshToken(string $token, int $days = 1): ?string
-        {
-            if (!$this->isValid($token)) {
-                return null;
-            }
-
-            [$selector,] = self::parseToken($token);
-            [$newSelector, $newValidator, $newToken] = self::generateToken();
-            if ($this->saveToken($newSelector, 'refresh', $selector, $newValidator, $days)) {
-                return $newToken;
-            }
-
-            return null;
-        }
-
         public function listExpiredTokens(): ?Token
         {
 
