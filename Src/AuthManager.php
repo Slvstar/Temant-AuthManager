@@ -15,13 +15,13 @@ namespace Temant\AuthManager {
         /**
          * @param SessionManagerInterface $session
          * @param StorageInterface $storage
-         * @param ConfigManagerInterface $config
+         * @param ConfigManagerInterface $configManager
          * @param TokenManager $tokenManager
          */
         public function __construct(
             private SessionManagerInterface $session,
             private StorageInterface $storage,
-            private ConfigManagerInterface $config,
+            private ConfigManagerInterface $configManager,
             private TokenManager $tokenManager
         ) {
         }
@@ -94,14 +94,14 @@ namespace Temant\AuthManager {
             ]);
 
             // Retrieve the token lifetime from configuration, determining how long the token should be valid
-            $lifeTime = (int) $this->config->get('remember_me_token_lifetime');
+            $lifeTime = (int) $this->configManager->get('remember_me_token_lifetime');
 
             // Save the new token in the database with the user ID, selector, validator, and its lifetime
-            $this->tokenManager->saveToken($userId, $this->config->get('remember_me_cookie_name'), $selector, $validator, $lifeTime);
+            $this->tokenManager->saveToken($userId, $this->configManager->get('remember_me_cookie_name'), $selector, $validator, $lifeTime);
 
             // Set a cookie in the user's browser with the token, using the cookie name from configuration
             // The cookie's expiration is set based on the token's lifetime
-            CookieManager::set($this->config->get('remember_me_cookie_name'), $token, time() + 60 * 60 * 24 * $lifeTime);
+            CookieManager::set($this->configManager->get('remember_me_cookie_name'), $token, time() + 60 * 60 * 24 * $lifeTime);
         }
 
         /**
@@ -135,7 +135,7 @@ namespace Temant\AuthManager {
             ]);
 
             // remove the remember_me cookie
-            CookieManager::delete($this->config->get('remember_me_cookie_name'));
+            CookieManager::delete($this->configManager->get('remember_me_cookie_name'));
 
             // remove all session data
             return $this->session->destroy();
@@ -181,7 +181,7 @@ namespace Temant\AuthManager {
                 return true;
             }
 
-            $token = filter_input(INPUT_COOKIE, $this->config->get('remember_me_cookie_name'), FILTER_SANITIZE_FULL_SPECIAL_CHARS);
+            $token = filter_input(INPUT_COOKIE, $this->configManager->get('remember_me_cookie_name'), FILTER_SANITIZE_FULL_SPECIAL_CHARS);
             if ($token && $this->tokenManager->isValid($token)) {
                 $user = $this->findUserByToken($token);
                 if ($user) {
@@ -423,10 +423,10 @@ namespace Temant\AuthManager {
                 'password' => $this->hashPassword($password)
             ]);
 
-            if ($this->config->get('mail_verify') === 'enabled') {
+            if ($this->configManager->get('mail_verify') === 'enabled') {
                 [$selector, $validator] = TokenManager::generateToken();
 
-                $this->tokenManager->saveToken($userId, 'email_activation', $selector, $validator, (int) $this->config->get('mail_activation_token_lifetime'));
+                $this->tokenManager->saveToken($userId, 'email_activation', $selector, $validator, (int) $this->configManager->get('mail_activation_token_lifetime'));
                 $this->verifyEmail($userId, $selector, $validator);
             }
 

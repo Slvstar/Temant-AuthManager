@@ -53,15 +53,13 @@ $auth = new AuthManager($session, $storage = new DatabaseStorage($db), new Confi
 
 // dd($auth->registerUser('Emadov', 'Almahdi', 'emad@almahdi.se', 'Slvstar123@'));
 try {
-    dump($auth->authenticate('Emad.A', 'Slvstar123@', true));
+    var_dump($auth->isAuthenticated());
+    var_dump($auth->isActivated('Emad.A'));
+    var_dump($auth->authenticate('Emad.A', 'Slvstar123@', true));
+    var_dump($auth->isAuthenticated());
+    var_dump($auth->deauthenticate());
+    var_dump($auth->isAuthenticated());
     //code...
 } catch (\Throwable $th) {
-    echo $th->getMessage();
-}
-
-try {
-    dump($auth->deauthenticate());
-    //code...
-} catch (\Throwable $th) {
-    echo $th->getMessage();
+    $th->getMessage();
 }
