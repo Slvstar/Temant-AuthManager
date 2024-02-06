@@ -30,8 +30,12 @@ $entityManager = new EntityManager($connection, $config);
 
 $tokenManager = new TokenManager($entityManager);
 
-// dd($tokenManager->removeAllTokensForUser('Doctrine'));
-// dd($tokenManager->saveToken('Test', 'Test', 'Test', 'Test'));
+
+foreach ($tokenManager->listAllTokensForUser('Test') as $key => $value) {
+    dump($value->getCreatedAt());
+}
+exit;
+dd($tokenManager->saveToken('Test', 'Test', 'Test', 'Test'));
 // dd($tokenManager->cleanupExpiredTokens());
 
 

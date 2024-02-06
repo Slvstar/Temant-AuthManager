@@ -182,6 +182,24 @@ namespace Temant\AuthManager {
         }
 
         /**
+         * List all tokens associated with a specific user ID.
+         *
+         * @param string $userId User ID whose tokens are to be listed.
+         * @return TokenEntity[] A list of tokens or empty array
+         */
+        public function listAllTokensForUser(string $userId): array
+        {
+            return $this->entityManager
+                ->createQueryBuilder()
+                ->select('t')
+                ->from(TokenEntity::class, 't')
+                ->where('t.userId = :userId')
+                ->setParameter('userId', $userId)
+                ->getQuery()
+                ->execute();
+        }
+
+        /**
          * Determines if a token is expired based on its stored expiry date.
          *
          * @param string $expiryDate Token's expiry date in 'Y-m-d H:i:s' format.

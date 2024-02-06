@@ -72,6 +72,14 @@ namespace Temant\AuthManager {
         public function refreshToken(string $token, int $days = 1): ?string;
 
         /**
+         * List all tokens associated with a specific user ID.
+         *
+         * @param string $userId User ID whose tokens are to be listed.
+         * @return TokenEntity[] A list of tokens or empty array
+         */
+        public function listAllTokensForUser(string $userId): array;
+
+        /**
          * Deletes all tokens associated with a specific user ID, commonly used for logging out or account deactivation.
          *
          * @param string $userId User ID whose tokens are to be deleted.
