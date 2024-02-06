@@ -21,7 +21,7 @@ $connection = DriverManager::getConnection([
     'driver' => 'pdo_mysql',
     'user' => 'intradb',
     'password' => 'Proto!728agt22Ws',
-    'dbname' => 'slim',
+    'dbname' => 'authentication',
 ], $config);
 
 // obtaining the entity manager
@@ -47,10 +47,13 @@ $session = new SessionManager;
 
 $session->start([]);
 
-$db = new DatabaseManager(new mysqli('localhost', 'intradb', 'Proto!728agt22Ws', 'slim'));
+$db = new DatabaseManager(new mysqli('localhost', 'intradb', 'Proto!728agt22Ws', 'authentication'));
 
-$auth = new AuthManager($session, $storage = new DatabaseStorage($db), new ConfigManager($entityManager), new TokenManager($entityManager));
+$auth = new AuthManager($entityManager, $session, $storage = new DatabaseStorage($db), new ConfigManager($entityManager), new TokenManager($entityManager));
 
+($auth->listAuthenticationAttempts('Emad.A'));
+
+$auth->countFailedAuthenticationAttempts('Emad.A', 111111);
 // dd($auth->registerUser('Emadov', 'Almahdi', 'emad@almahdi.se', 'Slvstar123@'));
 try {
     var_dump($auth->isAuthenticated());

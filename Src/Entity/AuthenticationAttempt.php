@@ -1,15 +1,15 @@
 <?php declare(strict_types=1);
 
 namespace Temant\AuthManager\Entity {
+    use DateTime;
     use DateTimeInterface;
     use Doctrine\ORM\Mapping\Column;
     use Doctrine\ORM\Mapping\Entity;
     use Doctrine\ORM\Mapping\GeneratedValue;
     use Doctrine\ORM\Mapping\Id;
     use Doctrine\ORM\Mapping\Table;
-    use Temant\AuthManager\Repository\AuthenticationAttemptRepository;
 
-    #[Entity(repositoryClass: AuthenticationAttemptRepository::class)]
+    #[Entity]
     #[Table(name: "authentication_attempts")]
     class AuthenticationAttempt
     {
@@ -35,6 +35,11 @@ namespace Temant\AuthManager\Entity {
 
         #[Column(type: "datetime")]
         private DateTimeInterface $timestamp;
+
+        public function __construct()
+        {
+            $this->timestamp = new DateTime();
+        }
 
         public function getId(): ?int
         {

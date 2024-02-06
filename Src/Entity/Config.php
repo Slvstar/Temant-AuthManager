@@ -8,7 +8,7 @@ namespace Temant\AuthManager\Entity {
     use Doctrine\ORM\Mapping\Table;
 
     #[Entity]
-    #[Table(name: "auth_config")]
+    #[Table(name: "authentication_configurations")]
     class Config
     {
         #[Id]

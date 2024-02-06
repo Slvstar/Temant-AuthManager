@@ -1,7 +1,9 @@
 <?php declare(strict_types=1);
 
 namespace Temant\AuthManager {
+    use Doctrine\ORM\EntityManager;
     use Temant\AuthManager\Config\ConfigManagerInterface;
+    use Temant\AuthManager\Entity\AuthenticationAttempt;
     use Temant\AuthManager\Storage\StorageInterface;
     use Temant\AuthManager\Utils\Utils;
     use Temant\CookieManager\CookieManager;
@@ -9,7 +11,6 @@ namespace Temant\AuthManager {
 
     class AuthManager implements AuthManagerInterface
     {
-        private const TBL_LOGIN_ATTEMPTS = 'auth_login_attempts';
         private const TBL_AUTH_USER = 'auth_user';
 
         /**
@@ -19,6 +20,7 @@ namespace Temant\AuthManager {
          * @param TokenManager $tokenManager
          */
         public function __construct(
+            private EntityManager $entityManager,
             private SessionManagerInterface $session,
             private StorageInterface $storage,
             private ConfigManagerInterface $configManager,
@@ -112,12 +114,11 @@ namespace Temant\AuthManager {
          * @param int $timePeriod The period of time in seconds during which to count the failed attempts.
          * @return int The number of failed login attempts within the specified time period.
          */
-        public function countFailedAuthenticationAttempts(string $userId, int $timePeriod): int
+        public function countFailedAuthenticationAttempts(string $userId, int $timePeriod = 1): int
         {
-            return count($this->storage->getRow(self::TBL_LOGIN_ATTEMPTS, [
-                'user_id' => $this->$userId,
-                'success' => false
-            ]));
+            return count($this->entityManager
+                ->getRepository(AuthenticationAttempt::class)
+                ->findBy(['userId' => $userId, "success" => false]));
         }
 
         /**
@@ -150,23 +151,28 @@ namespace Temant\AuthManager {
          */
         public function deleteAuthenticationAttempts(string $userId): bool
         {
-            return $this->storage->removeRow(self::TBL_LOGIN_ATTEMPTS, [
-                'user_id' => $userId
-            ]);
+            return (bool) $this->entityManager
+                ->getRepository(AuthenticationAttempt::class)
+                ->createQueryBuilder('a')
+                ->delete()
+                ->where('a.userId = :userId')
+                ->setParameter('userId', $userId)
+                ->getQuery()->execute();
         }
 
         /**
          * Retrieves the status of the last authentication attempt for a specific user.
-         * This can be used for audit purposes or to provide feedback on login failures.
          *
-         * @param string $userId The unique identifier of the user whose last authentication attempt status is to be retrieved.
-         * @return bool|null Returns true if the last attempt was successful, false if it was unsuccessful, or null if there is no record of an attempt.
+         * @param string $userId The unique identifier of the user.
+         * @return bool|null Returns true if the last attempt was successful, false if unsuccessful, or null if no record exists.
          */
         public function getLastAuthenticationStatus(string $userId): ?bool
         {
-            return (bool) $this->storage->getColumn(self::TBL_LOGIN_ATTEMPTS, 'success', [
-                'user_id' => $userId
-            ]);
+            $result = $this->entityManager
+                ->getRepository(AuthenticationAttempt::class)
+                ->findOneBy(['userId' => $userId], ['timestamp' => "DESC"]);
+
+            return $result ? $result->getSuccess() : null;
         }
 
         /**
@@ -220,13 +226,13 @@ namespace Temant\AuthManager {
          * to analyze user login patterns, or to detect potential security breaches by reviewing suspicious login attempts.
          *
          * @param string $userId The unique identifier of the user whose authentication attempts are to be listed.
-         * @return mixed[] An array of authentication attempts, each containing details such as attempt timestamp, success/failure status, and IP address.
+         * @return AuthenticationAttempt[] An array of authentication attempts, each containing details such as attempt timestamp, success/failure status, and IP address.
          */
         public function listAuthenticationAttempts(string $userId): array
         {
-            return $this->storage->getRows(self::TBL_LOGIN_ATTEMPTS, [
-                'user_id' => $userId
-            ]);
+            return $this->entityManager
+                ->getRepository(AuthenticationAttempt::class)
+                ->findBy(['userId' => $userId]);
         }
 
         /**
@@ -242,13 +248,17 @@ namespace Temant\AuthManager {
          */
         public function logAuthenticationAttempt(string $userId, bool $success, ?string $reason = null, ?string $ipAddress = null, ?string $userAgent = null): bool
         {
-            return $this->storage->insertRow(self::TBL_LOGIN_ATTEMPTS, [
-                'user_id' => $userId,
-                'success' => $success,
-                'reason' => $reason,
-                'ip_address' => Utils::IP(),
-                'user_agent' => is_null($userAgent) ? $_SERVER['HTTP_USER_AGENT'] : $userAgent
-            ]);
+            $attempt = (new AuthenticationAttempt)
+                ->setUserId($userId)
+                ->setSuccess($success)
+                ->setReason($reason)
+                ->setIpAddress($ipAddress ?: Utils::IP())
+                ->setUserAgent($userAgent ?: $_SERVER['HTTP_USER_AGENT']);
+
+            $this->entityManager->persist($attempt);
+            $this->entityManager->flush();
+
+            return true;
         }
 
         /**

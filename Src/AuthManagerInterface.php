@@ -61,7 +61,7 @@ namespace Temant\AuthManager {
          * @param int $timePeriod The period of time in seconds during which to count the failed attempts.
          * @return int The number of failed login attempts within the specified time period.
          */
-        public function countFailedAuthenticationAttempts(string $userId, int $timePeriod): int;
+        public function countFailedAuthenticationAttempts(string $userId, int $timePeriod = 1): int;
 
         /**
          * Deletes all authentication attempts for a given user. This method can be particularly useful for clearing a user's authentication history, 
