@@ -152,11 +152,14 @@ namespace Temant\AuthManager\Repository {
          * Saves a new token or updates an existing one in the database.
          *
          * @param Token $token The Token entity to save or update.
+         * @return bool indicating if saving is done
          */
-        public function saveToken(Token $token): void
+        public function saveToken(Token $token): bool
         {
             $this->getEntityManager()->persist($token);
             $this->getEntityManager()->flush();
+
+            return !is_null(parent::find($token->getId()));
         }
 
         /**

@@ -17,6 +17,7 @@ namespace Temant\AuthManager {
     class TokenManager implements TokenManagerInterface
     {
         private TokenRepository $tokenRepository;
+
         /**
          * Initializes the TokenManager with Doctrine's EntityManager for database operations.
          *
@@ -69,17 +70,14 @@ namespace Temant\AuthManager {
          */
         public function saveToken(string $userId, string $type, string $selector, string $validator, int $days = 1): bool
         {
-            $token = (new Token())
-                ->setUserId($userId)
-                ->setType($type)
-                ->setSelector($selector)
-                ->setValidator($validator)
-                ->setExpiresAt((new DateTime())->add(new DateInterval('P' . $days . 'D')));
-
-            $this->entityManager->persist($token);
-            $this->entityManager->flush();
-
-            return true;
+            return $this->tokenRepository->saveToken(
+                (new Token())
+                    ->setUserId($userId)
+                    ->setType($type)
+                    ->setSelector($selector)
+                    ->setValidator($validator)
+                    ->setExpiresAt((new DateTime())->add(new DateInterval('P' . $days . 'D')))
+            );
         }
 
         /**
@@ -163,7 +161,7 @@ namespace Temant\AuthManager {
         {
 
 
-            dd($this->tokenRepository->findExpiredTokens());
+            dump($this->tokenRepository->findExpiredTokens());
 
             $token = (new Token())
                 ->setUserId('$userId')
@@ -176,7 +174,7 @@ namespace Temant\AuthManager {
             dump($this->tokenRepository->findByUser('Emad.A'));
             dump($this->tokenRepository->findByType('remember_me'));
             dump($this->tokenRepository->findByUserAndType('Emad.A', 'remember_me'));
-            dump($this->tokenRepository->saveToken($token));
+            dd($this->tokenRepository->saveToken($token));
 
 
             return null;
