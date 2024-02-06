@@ -6,6 +6,7 @@ namespace Temant\AuthManager {
     use Doctrine\DBAL\Types\Types;
     use Doctrine\ORM\EntityManagerInterface;
     use Temant\AuthManager\Entity\Token;
+    use Temant\AuthManager\Repository\TokenRepository;
 
     /**
      * Manages authentication tokens throughout their lifecycle, including creation, storage, retrieval, validation, and deletion.
@@ -15,6 +16,7 @@ namespace Temant\AuthManager {
      */
     class TokenManager implements TokenManagerInterface
     {
+        private TokenRepository $tokenRepository;
         /**
          * Initializes the TokenManager with Doctrine's EntityManager for database operations.
          *
@@ -23,6 +25,7 @@ namespace Temant\AuthManager {
         public function __construct(
             private EntityManagerInterface $entityManager
         ) {
+            $this->tokenRepository = $this->entityManager->getRepository(Token::class);
         }
 
         /**
@@ -158,17 +161,23 @@ namespace Temant\AuthManager {
 
         public function listExpiredTokens(): ?Token
         {
-            $token = (new Token)
+
+
+            dd($this->tokenRepository->findExpiredTokens());
+
+            $token = (new Token())
                 ->setUserId('$userId')
                 ->setType('$type')
                 ->setSelector('$selector')
-                ->setValidator('$validator');
+                ->setValidator('$validator')
+                ->setExpiresAt((new DateTime())->add(new DateInterval('P' . 1 . 'D')));
 
-            dump($this->entityManager->getRepository(Token::class)->findBySelector('1111'));
-            dump($this->entityManager->getRepository(Token::class)->findByUser('Emad.A'));
-            dump($this->entityManager->getRepository(Token::class)->findByType('remember_me'));
-            dump($this->entityManager->getRepository(Token::class)->findByUserAndType('Emad.A', 'remember_me'));
-            dump($this->entityManager->getRepository(Token::class)->saveToken($token));
+            dump($this->tokenRepository->findBySelector('1111'));
+            dump($this->tokenRepository->findByUser('Emad.A'));
+            dump($this->tokenRepository->findByType('remember_me'));
+            dump($this->tokenRepository->findByUserAndType('Emad.A', 'remember_me'));
+            dump($this->tokenRepository->saveToken($token));
+
 
             return null;
         }

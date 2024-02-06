@@ -4,7 +4,6 @@ namespace Temant\AuthManager\Repository {
     use DateTime;
     use Doctrine\ORM\EntityRepository;
     use Temant\AuthManager\Entity\Token;
-    use Doctrine\DBAL\Types\Types;
 
     class TokenRepository extends EntityRepository
     {
@@ -65,7 +64,7 @@ namespace Temant\AuthManager\Repository {
         {
             return $this->createQueryBuilder('t')
                 ->where('t.expiresAt < :now')
-                ->setParameter('now', new DateTime(), Types::DATETIME_MUTABLE)
+                ->setParameter('now', new DateTime())
                 ->getQuery()->getResult();
         }
 
