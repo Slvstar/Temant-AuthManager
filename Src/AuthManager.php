@@ -212,7 +212,7 @@ namespace Temant\AuthManager {
 
             // Query the storage to find the user ID associated with the provided selector and validator
             // Then, retrieve the user's row from the 'auth_user' table using the found user ID
-            return $this->storage->getRow('auth_user', ['user_id' => $this->storage->getColumn('auth_token', 'user_id', ['selector' => $selector, 'validator' => $validator])]);
+            return $this->storage->getRow(self::TBL_AUTH_USER, ['user_id' => $this->storage->getColumn('auth_token', 'user_id', ['selector' => $selector, 'validator' => $validator])]);
         }
 
         /**
@@ -288,10 +288,10 @@ namespace Temant\AuthManager {
          */
         private function verifyPassword(string $userId, string $password): bool
         {
-            $hashedPassword = $this->storage->getColumn('auth_user', 'password', ['user_id' => $userId]);
+            $hashedPassword = $this->storage->getColumn(self::TBL_AUTH_USER, 'password', ['user_id' => $userId]);
             if (password_needs_rehash($hashedPassword, PASSWORD_BCRYPT)) {
                 $this->changePassword($userId, $hashedPassword);
-                $hashedPassword = $this->storage->getColumn('auth_user', 'password', ['user_id' => $userId]);
+                $hashedPassword = $this->storage->getColumn(self::TBL_AUTH_USER, 'password', ['user_id' => $userId]);
             }
             return password_verify($password, $hashedPassword);
         }
@@ -306,7 +306,7 @@ namespace Temant\AuthManager {
         public function activateAccount(string $userId): bool
         {
             return !$this->isActivated($userId)
-                && $this->storage->modifyRow('auth_user', ['is_activated' => true], ['user_id' => $userId]);
+                && $this->storage->modifyRow(self::TBL_AUTH_USER, ['is_activated' => true], ['user_id' => $userId]);
         }
 
         /**
@@ -319,7 +319,7 @@ namespace Temant\AuthManager {
         public function deactivateAccount(string $userId): bool
         {
             return $this->isActivated($userId)
-                && $this->storage->modifyRow('auth_user', ['is_activated' => false], ['user_id' => $userId]);
+                && $this->storage->modifyRow(self::TBL_AUTH_USER, ['is_activated' => false], ['user_id' => $userId]);
         }
 
         /**
@@ -330,7 +330,7 @@ namespace Temant\AuthManager {
          */
         public function isActivated(string $userId): bool
         {
-            return (bool) $this->storage->getColumn('auth_user', 'is_activated', ['user_id' => $userId]);
+            return (bool) $this->storage->getColumn(self::TBL_AUTH_USER, 'is_activated', ['user_id' => $userId]);
         }
 
         /**
@@ -341,7 +341,7 @@ namespace Temant\AuthManager {
          */
         public function isLocked(string $userId): bool
         {
-            return (bool) $this->storage->getColumn('auth_user', 'is_locked', ['user_id' => $userId]);
+            return (bool) $this->storage->getColumn(self::TBL_AUTH_USER, 'is_locked', ['user_id' => $userId]);
         }
 
         /**
@@ -354,7 +354,7 @@ namespace Temant\AuthManager {
         public function lockAccount(string $userId): bool
         {
             return !$this->isLocked($userId)
-                && $this->storage->modifyRow('auth_user', ['is_locked' => true], ['user_id' => $userId]);
+                && $this->storage->modifyRow(self::TBL_AUTH_USER, ['is_locked' => true], ['user_id' => $userId]);
         }
 
         /**
@@ -367,7 +367,7 @@ namespace Temant\AuthManager {
         public function unlockAccount(string $userId): bool
         {
             return !$this->isLocked($userId)
-                && $this->storage->modifyRow('auth_user', ['is_locked' => false], ['user_id' => $userId]);
+                && $this->storage->modifyRow(self::TBL_AUTH_USER, ['is_locked' => false], ['user_id' => $userId]);
         }
 
         /**
@@ -380,7 +380,7 @@ namespace Temant\AuthManager {
         {
             $userId = sprintf('%s.%s', ucfirst($firstName), ucfirst(substr($lastName, 0, 1)));
 
-            $count = count($this->storage->getRows('auth_user', ['user_id' => ["$userId%", 'LIKE']]));
+            $count = count($this->storage->getRows(self::TBL_AUTH_USER, ['user_id' => ["$userId%", 'LIKE']]));
             if ($count > 0) {
                 return $userId . $count++;
             }
@@ -415,7 +415,7 @@ namespace Temant\AuthManager {
         function registerUser(string $firstName, string $lastName, string $email, string $password): bool
         {
             $userId = $this->generateUserId($firstName, $lastName);
-            $this->storage->insertRow('auth_user', [
+            $this->storage->insertRow(self::TBL_AUTH_USER, [
                 'user_id' => $userId,
                 'first_name' => $firstName,
                 'last_name' => $lastName,
@@ -435,7 +435,7 @@ namespace Temant\AuthManager {
 
         public function verifyEmail(string $userId, string $selector, string $validator): bool
         {
-            $email = $this->storage->getColumn('auth_user', 'email', ['user_id' => $userId]);
+            $email = $this->storage->getColumn(self::TBL_AUTH_USER, 'email', ['user_id' => $userId]);
             // set email subject & body
             $subject = 'Please activate your account';
             $message = <<<MESSAGE
