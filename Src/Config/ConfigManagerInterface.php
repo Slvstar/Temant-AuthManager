@@ -11,15 +11,14 @@ namespace Temant\AuthManager\Config {
      * @since   2023-08-29
      * @author  Emad Almahdi
      */
-    interface ConfigInterface
+    interface ConfigManagerInterface
     {
         /**
          * Get a configuration value by key.
          *
-         * @param string $key   The key of the configuration value.
-         * @return ?string      The configuration value associated with the key, or null if not found.
+         * @param string $key   The key of the configuration value. 
          */
-        public function get(string $key): ?string;
+        public function get(string $key): mixed;
 
         /**
          * Set a configuration value.
@@ -29,15 +28,6 @@ namespace Temant\AuthManager\Config {
          * @return bool         True on successful setting, false if there was an issue.
          */
         public function set(string $key, string $value): bool;
-
-        /**
-         * Update a configuration value.
-         *
-         * @param string $key   The key of the configuration value to update.
-         * @param string $value The new value to update for the configuration.
-         * @return bool         True on successful update, false if the key doesn't exist.
-         */
-        public function update(string $key, string $value): bool;
 
         /**
          * Check if a configuration key exists.

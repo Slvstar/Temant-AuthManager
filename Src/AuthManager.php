@@ -1,8 +1,7 @@
 <?php declare(strict_types=1);
 
 namespace Temant\AuthManager {
-    use Temant\AuthManager\Auth\User;
-    use Temant\AuthManager\Config\ConfigInterface;
+    use Temant\AuthManager\Config\ConfigManagerInterface;
     use Temant\AuthManager\Storage\StorageInterface;
     use Temant\AuthManager\Utils\Utils;
     use Temant\CookieManager\CookieManager;
@@ -16,13 +15,13 @@ namespace Temant\AuthManager {
         /**
          * @param SessionManagerInterface $session
          * @param StorageInterface $storage
-         * @param ConfigInterface $config
+         * @param ConfigManagerInterface $config
          * @param TokenManager $tokenManager
          */
         public function __construct(
             private SessionManagerInterface $session,
             private StorageInterface $storage,
-            private ConfigInterface $config,
+            private ConfigManagerInterface $config,
             private TokenManager $tokenManager
         ) {
         }
@@ -131,7 +130,7 @@ namespace Temant\AuthManager {
         {
             // delete the user token
             $this->tokenManager->removeToken([
-                'user_id' => $this->session->get('user_id'),
+                'userId' => $this->session->get('user_id'),
                 'type' => 'remember_me'
             ]);
 

@@ -3,8 +3,7 @@ use Doctrine\DBAL\DriverManager;
 use Doctrine\ORM\EntityManager;
 use Doctrine\ORM\ORMSetup;
 use Temant\AuthManager\AuthManager;
-use Temant\AuthManager\Config\DatabaseConfig;
-use Temant\AuthManager\Entity\Config;
+use Temant\AuthManager\Config\ConfigManager;
 use Temant\AuthManager\Storage\DatabaseStorage;
 use Temant\AuthManager\TokenManager;
 use Temant\DatabaseManager\DatabaseManager;
@@ -44,23 +43,24 @@ $entityManager = new EntityManager($connection, $config);
 
 
 
-
-
-
-
-
-
 $session = new SessionManager;
 
 $session->start([]);
 
 $db = new DatabaseManager(new mysqli('localhost', 'intradb', 'Proto!728agt22Ws', 'slim'));
 
-$auth = new AuthManager($session, $storage = new DatabaseStorage($db), new DatabaseConfig($storage), new TokenManager($entityManager));
+$auth = new AuthManager($session, $storage = new DatabaseStorage($db), new ConfigManager($entityManager), new TokenManager($entityManager));
 
 // dd($auth->registerUser('Emadov', 'Almahdi', 'emad@almahdi.se', 'Slvstar123@'));
 try {
     dump($auth->authenticate('Emad.A', 'Slvstar123@', true));
+    //code...
+} catch (\Throwable $th) {
+    echo $th->getMessage();
+}
+
+try {
+    dump($auth->deauthenticate());
     //code...
 } catch (\Throwable $th) {
     echo $th->getMessage();
