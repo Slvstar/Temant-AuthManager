@@ -29,18 +29,18 @@ $connection = DriverManager::getConnection([
 $entityManager = new EntityManager($connection, $config);
 
 
-dd($entityManager->getRepository(Config::class)->findAll());
+// dd($entityManager->getRepository(Config::class)->findAll());
 
 
-$tokenManager = new TokenManager($entityManager);
+// $tokenManager = new TokenManager($entityManager);
 
 
-foreach ($tokenManager->listAllTokensForUser('Test') as $key => $value) {
-    dump($value->getCreatedAt());
-}
-exit;
-dd($tokenManager->saveToken('Test', 'Test', 'Test', 'Test'));
-// dd($tokenManager->cleanupExpiredTokens());
+// foreach ($tokenManager->listAllTokensForUser('Test') as $key => $value) {
+//     dump($value->getCreatedAt());
+// }
+// exit;
+// dd($tokenManager->saveToken('Test', 'Test', 'Test', 'Test'));
+// // dd($tokenManager->cleanupExpiredTokens());
 
 
 
@@ -54,9 +54,14 @@ $session = new SessionManager;
 
 $session->start([]);
 
-$db = new DatabaseManager(new mysqli('localhost', 'intradb', 'Proto!728agt22Ws', 'intradb'));
+$db = new DatabaseManager(new mysqli('localhost', 'intradb', 'Proto!728agt22Ws', 'slim'));
 
 $auth = new AuthManager($session, $storage = new DatabaseStorage($db), new DatabaseConfig($storage), new TokenManager($entityManager));
 
 // dd($auth->registerUser('Emadov', 'Almahdi', 'emad@almahdi.se', 'Slvstar123@'));
-// dump($auth->authenticate('Emad.A', 'Slvstar123@', true));
+try {
+    dump($auth->authenticate('Emad.A', 'Slvstar123@', true));
+    //code...
+} catch (\Throwable $th) {
+    echo $th->getMessage();
+}

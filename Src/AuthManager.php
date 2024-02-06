@@ -90,7 +90,7 @@ namespace Temant\AuthManager {
             // Remove all existing tokens associated with the user ID for 'remember_me' type
             // to prevent multiple valid tokens for the same user
             $this->tokenManager->removeToken([
-                'user_id' => $userId,
+                'userId' => $userId,
                 'type' => 'remember_me'
             ]);
 
