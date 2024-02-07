@@ -1,9 +1,9 @@
 <?php
 
 namespace Temant\AuthManager\Entity {
-
     use Doctrine\ORM\Mapping\Column;
     use Doctrine\ORM\Mapping\Entity;
+    use Doctrine\ORM\Mapping\GeneratedValue;
     use Doctrine\ORM\Mapping\Id;
     use Doctrine\ORM\Mapping\Table;
 
@@ -12,32 +12,57 @@ namespace Temant\AuthManager\Entity {
     class Role
     {
         #[Id]
-        #[Column(name: "config_key ", type: "string")]
-        private string $configKey;
+        #[Column(name: "id")]
+        #[GeneratedValue]
+        private int $id;
 
-        #[Column(name: "config_value ", type: "string")]
-        private string $configValue;
+        #[Column(name: "name")]
+        private string $name;
 
-        // Getters and setters
-        public function getConfigKey(): ?string
+        #[Column(name: "description")]
+        private string $description;
+
+        /**
+         * @return int
+         */
+        public function getId(): int
         {
-            return $this->configKey;
+            return $this->id;
         }
 
-        public function setConfigKey(string $configKey): self
+        /**
+         * @return string
+         */
+        public function getName(): string
         {
-            $this->configKey = $configKey;
+            return $this->name;
+        }
+
+        /**
+         * @param string $name 
+         * @return self
+         */
+        public function setName(string $name): self
+        {
+            $this->name = $name;
             return $this;
         }
 
-        public function getConfigValue(): ?string
+        /**
+         * @return string
+         */
+        public function getDescription(): string
         {
-            return $this->configValue;
+            return $this->description;
         }
 
-        public function setConfigValue(string $configValue): self
+        /**
+         * @param string $description 
+         * @return self
+         */
+        public function setDescription(string $description): self
         {
-            $this->configValue = $configValue;
+            $this->description = $description;
             return $this;
         }
     }
