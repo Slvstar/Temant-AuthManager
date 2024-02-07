@@ -4,6 +4,7 @@ namespace Temant\AuthManager {
     use Doctrine\ORM\EntityManager;
     use Temant\AuthManager\Config\ConfigManagerInterface;
     use Temant\AuthManager\Entity\AuthenticationAttempt;
+    use Temant\AuthManager\Entity\User;
     use Temant\AuthManager\Storage\StorageInterface;
     use Temant\AuthManager\Utils\Utils;
     use Temant\CookieManager\CookieManager;
@@ -85,13 +86,16 @@ namespace Temant\AuthManager {
          */
         private function rememberUser(string $userId): void
         {
+            //User object
+            $user = $this->entityManager->getRepository(User::class)->findOneBy(['userId' => $userId]);
+
             // Generate a new token using the TokenManager
             [$selector, $validator, $token] = TokenManager::generateToken();
 
             // Remove all existing tokens associated with the user ID for 'remember_me' type
             // to prevent multiple valid tokens for the same user
             $this->tokenManager->removeToken([
-                'userId' => $userId,
+                'userId' => $user,
                 'type' => 'remember_me'
             ]);
 
@@ -99,7 +103,7 @@ namespace Temant\AuthManager {
             $lifeTime = (int) $this->configManager->get('remember_me_token_lifetime');
 
             // Save the new token in the database with the user ID, selector, validator, and its lifetime
-            $this->tokenManager->saveToken($userId, $this->configManager->get('remember_me_cookie_name'), $selector, $validator, $lifeTime);
+            $this->tokenManager->saveToken($user, $this->configManager->get('remember_me_cookie_name'), $selector, $validator, $lifeTime);
 
             // Set a cookie in the user's browser with the token, using the cookie name from configuration
             // The cookie's expiration is set based on the token's lifetime
@@ -425,6 +429,8 @@ namespace Temant\AuthManager {
         function registerUser(string $firstName, string $lastName, string $email, string $password): bool
         {
             $userId = $this->generateUserId($firstName, $lastName);
+
+            $userObject = $this->entityManager->getRepository(User::class)->findOneBy(['userId' => $userId]);
             $this->storage->insertRow(self::TBL_AUTH_USER, [
                 'user_id' => $userId,
                 'first_name' => $firstName,
@@ -436,7 +442,7 @@ namespace Temant\AuthManager {
             if ($this->configManager->get('mail_verify') === 'enabled') {
                 [$selector, $validator] = TokenManager::generateToken();
 
-                $this->tokenManager->saveToken($userId, 'email_activation', $selector, $validator, (int) $this->configManager->get('mail_activation_token_lifetime'));
+                $this->tokenManager->saveToken($userObject, 'email_activation', $selector, $validator, (int) $this->configManager->get('mail_activation_token_lifetime'));
                 $this->verifyEmail($userId, $selector, $validator);
             }
 

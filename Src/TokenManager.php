@@ -6,6 +6,7 @@ namespace Temant\AuthManager {
     use Doctrine\DBAL\Types\Types;
     use Doctrine\ORM\EntityManagerInterface;
     use Temant\AuthManager\Entity\Token;
+    use Temant\AuthManager\Entity\User;
     use Temant\AuthManager\Repository\TokenRepository;
 
     /**
@@ -14,7 +15,7 @@ namespace Temant\AuthManager {
      * and abstracting direct database access. It supports various token-related operations essential for secure authentication
      * and session management within applications.
      */
-    class TokenManager implements TokenManagerInterface
+    class TokenManager // implements TokenManagerInterface
     {
         private TokenRepository $tokenRepository;
 
@@ -61,18 +62,18 @@ namespace Temant\AuthManager {
         /**
          * Stores a token in the database along with associated user information and expiration details.
          *
-         * @param string $userId Identifier of the user associated with the token.
+         * @param User $user Identifier of the user associated with the token.
          * @param string $type Purpose of the token (e.g., 'session', 'reset').
          * @param string $selector Token's unique identifier for lookup.
          * @param string $validator Hashed validator part of the token for security.
          * @param int $days Lifespan of the token in days, defaults to 1 day.
          * @return bool Returns true upon successful storage, otherwise false.
          */
-        public function saveToken(string $userId, string $type, string $selector, string $validator, int $days = 1): bool
+        public function saveToken(User $user, string $type, string $selector, string $validator, int $days = 1): bool
         {
             return $this->tokenRepository->saveToken(
                 (new Token())
-                    ->setUserId($userId)
+                    ->setUser($user)
                     ->setType($type)
                     ->setSelector($selector)
                     ->setValidator($validator)
@@ -133,29 +134,6 @@ namespace Temant\AuthManager {
             [$selector, $validator] = self::parseToken($token) ?: ['', ''];
             $tokenData = $this->getTokenBySelector($selector);
             return isset($tokenData['validator']) && password_verify($validator, $tokenData['validator']);
-        }
-
-        public function listExpiredTokens(): ?Token
-        {
-
-
-            dump($this->tokenRepository->findExpiredTokens());
-
-            $token = (new Token())
-                ->setUserId('$userId')
-                ->setType('$type')
-                ->setSelector('$selector')
-                ->setValidator('$validator')
-                ->setExpiresAt((new DateTime())->add(new DateInterval('P' . 1 . 'D')));
-
-            dump($this->tokenRepository->findBySelector('1111'));
-            dump($this->tokenRepository->findByUser('Emad.A'));
-            dump($this->tokenRepository->findByType('remember_me'));
-            dump($this->tokenRepository->findByUserAndType('Emad.A', 'remember_me'));
-            dd($this->tokenRepository->saveToken($token));
-
-
-            return null;
         }
 
         /**

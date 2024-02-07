@@ -30,27 +30,26 @@ $connection = DriverManager::getConnection([
 $entityManager = new EntityManager($connection, $config);
 
 
-$user = $entityManager->getRepository(User::class)->findOneBy(['userId' => "Emad.A"]);
+// $user = $entityManager->getRepository(User::class)->findOneBy(['userId' => "Emad.A"]);
 
-$user->addToken((new Token())
-    ->setUser($user)
-    ->setType('remember_me')
-    ->setSelector(bin2hex(random_bytes(16)))
-    ->setValidator(bin2hex(random_bytes(32)))
-    ->setExpiresAt((new DateTime())->add(new DateInterval('P' . 1 . 'D'))));
-$entityManager->persist($user);
-$entityManager->flush();
+// $user->addToken((new Token())
+//     ->setUser($user)
+//     ->setType('remember_me')
+//     ->setSelector(bin2hex(random_bytes(16)))
+//     ->setValidator(bin2hex(random_bytes(32)))
+//     ->setExpiresAt((new DateTime())->add(new DateInterval('P' . 1 . 'D'))));
+// $entityManager->persist($user);
+// $entityManager->flush();
 
-dd($user->getTokens()->toArray());
+// dd($user->getTokens()->toArray());
+
+$user = $entityManager->getRepository(User::class)->findOneBy(['userId' => 'Emad.A']);
+
+$tokenManager = new TokenManager($entityManager);
 
 
-// $tokenManager = new TokenManager($entityManager);
-
-// dd($tokenManager->listExpiredTokens());
-
-
-// dd($tokenManager->saveToken('Test', 'Test', 'Test', 'Test'));
-// dd($tokenManager->cleanupExpiredTokens());
+//dd($tokenManager->saveToken($user, 'Test', 'Test', 'Test'));
+//dd($tokenManager->cleanupExpiredTokens());
 
 
 
@@ -66,14 +65,9 @@ $auth = new AuthManager($entityManager, $session, $storage = new DatabaseStorage
 
 $auth->countFailedAuthenticationAttempts('Emad.A', 111111);
 // dd($auth->registerUser('Emadov', 'Almahdi', 'emad@almahdi.se', 'Slvstar123@'));
-try {
-    var_dump($auth->authenticate('Emad.A', 'Slvstar123@', true));
-    var_dump($auth->isAuthenticated());
-    var_dump($auth->isActivated('Emad.A'));
-    var_dump($auth->isAuthenticated());
-    var_dump($auth->deauthenticate());
-    var_dump($auth->isAuthenticated());
-    //code...
-} catch (\Throwable $th) {
-    $th->getMessage();
-}
+var_dump($auth->authenticate('Emad.A', 'Slvstar123@', true));
+var_dump($auth->isAuthenticated());
+var_dump($auth->isActivated('Emad.A'));
+var_dump($auth->isAuthenticated());
+var_dump($auth->deauthenticate());
+var_dump($auth->isAuthenticated());
