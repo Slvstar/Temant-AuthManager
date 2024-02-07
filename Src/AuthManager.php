@@ -52,10 +52,11 @@ namespace Temant\AuthManager {
             }
 
             // Check if password is correct
-            if (!$this->verifyPassword($username, $password)) {
+            if (!$this->verifyPassword($user, $password)) {
                 $this->logAuthenticationAttempt($user, false, 'Wrong password');
                 return false;
             }
+
             // At this point, all checks have passed
             $this->session->regenerate();
             $this->deleteAuthenticationAttempts($user); // Assumes functionality to delete previous failed login attempts, if any
@@ -82,38 +83,38 @@ namespace Temant\AuthManager {
          */
         private function rememberUser(User $user): void
         {
-            // Generate a new token using the TokenManager
-            [$selector, $validator, $token] = TokenManager::generateToken();
+            // Generate a new token using the TokenManager.
+            [$selector, $validator, $token] = $this->tokenManager->generateToken();
 
-            // Remove all existing tokens associated with the user ID for 'remember_me' type
-            // to prevent multiple valid tokens for the same user
+            // Remove all existing tokens associated with the user ID for 'remember_me'.
             $this->tokenManager
                 ->removeTokensForUserByType($user, 'remember_me');
 
-            // Retrieve the token lifetime from configuration, determining how long the token should be valid
+            // Get the remember me token lifetime and name from the configuration
             $lifeTime = (int) $this->configManager->get('remember_me_token_lifetime');
+            $tokenName = $this->configManager->get('remember_me_cookie_name');
 
             // Save the new token in the database with the user ID, selector, validator, and its lifetime
-            $this->tokenManager->saveToken($user, $this->configManager->get('remember_me_cookie_name'), $selector, $validator, $lifeTime);
+            $this->tokenManager->saveToken($user, $tokenName, $selector, $validator, $lifeTime);
 
             // Set a cookie in the user's browser with the token, using the cookie name from configuration
             // The cookie's expiration is set based on the token's lifetime
-            CookieManager::set($this->configManager->get('remember_me_cookie_name'), $token, time() + 60 * 60 * 24 * $lifeTime);
+            CookieManager::set($tokenName, $token, time() + 60 * 60 * 24 * $lifeTime);
         }
 
         /**
          * Counts the number of failed authentication attempts for a specific user within a given time frame.
          * This can be used as part of security measures to implement account lockout policies after a certain number of failed attempts.
          *
-         * @param string $username The unique identifier of the user.
+         * @param User $user The unique identifier of the user.
          * @param int $timePeriod The period of time in seconds during which to count the failed attempts.
          * @return int The number of failed login attempts within the specified time period.
          */
-        public function countFailedAuthenticationAttempts(string $username, int $timePeriod = 1): int
+        public function countFailedAuthenticationAttempts(User $user, int $timePeriod = 1): int
         {
             return count($this->entityManager
                 ->getRepository(AuthenticationAttempt::class)
-                ->findBy(['userId' => $username, "success" => false]));
+                ->findBy(['user' => $user, "success" => false]));
         }
 
         /**
@@ -151,22 +152,22 @@ namespace Temant\AuthManager {
                 ->getRepository(AuthenticationAttempt::class)
                 ->createQueryBuilder('a')
                 ->delete()
-                ->where('a.userId = :userId')
-                ->setParameter('userId', $user->getId())
+                ->where('a.user = :user')
+                ->setParameter('user', $user)
                 ->getQuery()->execute();
         }
 
         /**
          * Retrieves the status of the last authentication attempt for a specific user.
          *
-         * @param string $userId The unique identifier of the user.
+         * @param User $user The unique identifier of the user.
          * @return bool|null Returns true if the last attempt was successful, false if unsuccessful, or null if no record exists.
          */
-        public function getLastAuthenticationStatus(string $userId): ?bool
+        public function getLastAuthenticationStatus(User $user): ?bool
         {
             $result = $this->entityManager
                 ->getRepository(AuthenticationAttempt::class)
-                ->findOneBy(['userId' => $userId], ['created_at' => "DESC"]);
+                ->findOneBy(['user' => $user], ['created_at' => "DESC"]);
 
             return $result ? $result->getSuccess() : null;
         }
@@ -210,22 +211,25 @@ namespace Temant\AuthManager {
         private function findUserByToken(string $token): User
         {
             // Parse the token to extract the selector and validator components
-            [$selector] = TokenManager::parseToken($token);
-            return $this->entityManager->getRepository(Token::class)->findOneBy(['selector' => $selector])->getUser();
+            [$selector] = $this->tokenManager->parseToken($token);
+            return $this->entityManager
+                ->getRepository(Token::class)
+                ->findOneBy(['selector' => $selector])
+                ->getUser();
         }
 
         /**
          * Lists all authentication attempts for a specific user. This method can be used for auditing purposes,
          * to analyze user login patterns, or to detect potential security breaches by reviewing suspicious login attempts.
          *
-         * @param string $userId The unique identifier of the user whose authentication attempts are to be listed.
+         * @param User $user The unique identifier of the user whose authentication attempts are to be listed.
          * @return AuthenticationAttempt[] An array of authentication attempts, each containing details such as attempt timestamp, success/failure status, and IP address.
          */
-        public function listAuthenticationAttempts(string $userId): array
+        public function listAuthenticationAttempts(User $user): array
         {
             return $this->entityManager
                 ->getRepository(AuthenticationAttempt::class)
-                ->findBy(['userId' => $userId]);
+                ->findBy(['user' => $user]);
         }
 
         /**
@@ -242,7 +246,7 @@ namespace Temant\AuthManager {
         public function logAuthenticationAttempt(User $user, bool $success, ?string $reason = null, ?string $ipAddress = null, ?string $userAgent = null): bool
         {
             $attempt = (new AuthenticationAttempt)
-                ->setUserId($user->getId())
+                ->setUser($user)
                 ->setSuccess($success)
                 ->setReason($reason)
                 ->setIpAddress($ipAddress ?: Utils::IP())
@@ -258,13 +262,13 @@ namespace Temant\AuthManager {
          * Changes the password for a given user. This method is typically used when a user wants to update their password,
          * often as part of account settings or security measures.
          *
-         * @param string $userId The unique identifier of the user whose password is to be changed. This could be their username, email address, or any system-specific user ID.
+         * @param User $user The unique identifier of the user whose password is to be changed. This could be their username, email address, or any system-specific user ID.
          * @param string $newPassword The new password that will replace the user's current password. This password will be hashed before storage for security.
          * @return bool Returns true if the password change is successful, false otherwise. A false return value might indicate an issue with updating the user record in the database.
          */
-        public function changePassword(string $userId, string $newPassword): bool
+        public function changePassword(User $user, string $newPassword): bool
         {
-            $user = $this->entityManager->getRepository(User::class)->findOneBy(['userId' => $userId]);
+            $user = $this->entityManager->getRepository(User::class)->find($user->getId());
             $this->entityManager->persist($user->setPassword($this->hashPassword($newPassword)));
             $this->entityManager->flush();
             return true;
@@ -284,19 +288,19 @@ namespace Temant\AuthManager {
         /**
          * Verifies that a given plaintext password matches a stored hashed password. This method is typically used during the authentication process to validate user login attempts.
          *
-         * @param string $username The unique identifier of the user.
+         * @param User $user The unique identifier of the user.
          * @param string $password The plaintext password provided by the user during login.
          * @return bool Returns true if the plaintext password, when hashed, matches the stored hashed password, indicating a successful password match. Returns false otherwise.
          */
-        private function verifyPassword(string $username, string $password): bool
+        private function verifyPassword(User $user, string $password): bool
         {
             $hashedPassword = $this->entityManager
                 ->getRepository(User::class)
-                ->findOneBy(['username' => $username])
+                ->find($user->getId())
                 ->getPassword();
 
             if (password_needs_rehash($hashedPassword, PASSWORD_DEFAULT, ["cost" => 12])) {
-                $this->changePassword($username, $hashedPassword);
+                $this->changePassword($user, $hashedPassword);
             }
             return password_verify($password, $hashedPassword);
         }
@@ -466,7 +470,7 @@ namespace Temant\AuthManager {
             $userObject = $this->entityManager->getRepository(User::class)->findOneBy(['username' => $username]);
 
             if ($this->configManager->get('mail_verify') === 'enabled') {
-                [$selector, $validator] = TokenManager::generateToken();
+                [$selector, $validator] = $this->tokenManager->generateToken();
 
                 $this->tokenManager->saveToken($userObject, 'email_activation', $selector, $validator, (int) $this->configManager->get('mail_activation_token_lifetime'));
                 $this->verifyEmail($username, $selector, $validator);

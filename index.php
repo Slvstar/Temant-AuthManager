@@ -48,7 +48,7 @@ try {
 
 
     //dd($tokenManager->saveToken($user, 'Test', 'Test', 'Test'));
-//dd($tokenManager->cleanupExpiredTokens());
+    //dd($tokenManager->cleanupExpiredTokens());
 
 
 
@@ -63,14 +63,14 @@ try {
 
     // dd($auth->getUserObject());
 
-    ($auth->listAuthenticationAttempts('Emad.A'));
+    // dump($auth->listAuthenticationAttempts($user));
 
-    $auth->countFailedAuthenticationAttempts('Emad.A', 111111);
+    // dump($auth->countFailedAuthenticationAttempts($user));
 
-    // $auth->changePassword('Emad.A', 'Slvstar123@');
-    // ($auth->registerUser('Emad', 'Almahdi', 'emad@alddmahfffdi.se', 'Slvstar123@'));
+    // dd($auth->changePassword($user, 'Slvstar123@'));
+    // dump($auth->registerUser('Emad', 'Almahdi', 'emad@alddmahfffdi.se', 'Slvstar123@'));
 
-    // var_dump($auth->authenticate('Emad.A', 'Slvstar123@', true));
+    dd($auth->authenticate('Emad.A', 'Slvstar123@', true));
 
     // $session->destroy();
     var_dump($auth->isAuthenticated());

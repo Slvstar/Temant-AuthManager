@@ -32,7 +32,7 @@ namespace Temant\AuthManager {
          *
          * @return string[] An array containing the selector, hashed validator, and the full token string.
          */
-        public static function generateToken(): array
+        public function generateToken(): array
         {
             // Unique identifier for database lookup.
             $selector = bin2hex(random_bytes(16));
@@ -72,7 +72,7 @@ namespace Temant\AuthManager {
          * @param string $token The complete token string to be dissected.
          * @return string[]|null An array containing the selector and validator, or null if the format is incorrect.
          */
-        public static function parseToken(string $token): ?array
+        public function parseToken(string $token): ?array
         {
             $parts = explode(':', $token);
             return count($parts) === 2 ? $parts : null; // Validates token format.
@@ -153,7 +153,7 @@ namespace Temant\AuthManager {
          */
         public function isValid(string $token): bool
         {
-            [$selector, $validator] = self::parseToken($token) ?: ['', ''];
+            [$selector, $validator] = $this->parseToken($token) ?: ['', ''];
             $tokenData = $this->getTokenBySelector($selector);
             return isset($tokenData['validator']) && password_verify($validator, $tokenData['validator']);
         }

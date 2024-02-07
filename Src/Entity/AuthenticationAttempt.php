@@ -7,6 +7,8 @@ namespace Temant\AuthManager\Entity {
     use Doctrine\ORM\Mapping\Entity;
     use Doctrine\ORM\Mapping\GeneratedValue;
     use Doctrine\ORM\Mapping\Id;
+    use Doctrine\ORM\Mapping\JoinColumn;
+    use Doctrine\ORM\Mapping\ManyToOne;
     use Doctrine\ORM\Mapping\Table;
 
     #[Entity]
@@ -18,8 +20,9 @@ namespace Temant\AuthManager\Entity {
         #[Column]
         private ?int $id = null;
 
-        #[Column(name: "user_id")]
-        private int $userId;
+        #[ManyToOne(targetEntity: User::class, inversedBy: 'attempts')]
+        #[JoinColumn(name: "user_id", referencedColumnName: "id")]
+        private User $user;
 
         #[Column]
         private bool $success;
@@ -44,17 +47,6 @@ namespace Temant\AuthManager\Entity {
         public function getId(): ?int
         {
             return $this->id;
-        }
-
-        public function getUserId(): int
-        {
-            return $this->userId;
-        }
-
-        public function setUserId(int $userId): self
-        {
-            $this->userId = $userId;
-            return $this;
         }
 
         public function getSuccess(): bool
@@ -109,6 +101,24 @@ namespace Temant\AuthManager\Entity {
         public function setCreatedAt(DateTimeInterface $createdAt): self
         {
             $this->createdAt = $createdAt;
+            return $this;
+        }
+
+        /**
+         * @return User
+         */
+        public function getUser(): User
+        {
+            return $this->user;
+        }
+
+        /**
+         * @param User $user 
+         * @return self
+         */
+        public function setUser(User $user): self
+        {
+            $this->user = $user;
             return $this;
         }
     }

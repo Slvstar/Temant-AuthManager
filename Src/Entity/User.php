@@ -49,10 +49,14 @@ namespace Temant\AuthManager\Entity {
         #[OneToMany(targetEntity: Token::class, mappedBy: "user", cascade: ["persist", "remove"])]
         private Collection $tokens;
 
+        #[OneToMany(targetEntity: AuthenticationAttempt::class, mappedBy: "user", cascade: ["persist", "remove"])]
+        private Collection $attempts;
+
         public function __construct()
         {
             $this->createdAt = new DateTime();
             $this->tokens = new ArrayCollection;
+            $this->attempts = new ArrayCollection;
         }
 
         public function getId(): int
@@ -165,6 +169,17 @@ namespace Temant\AuthManager\Entity {
         public function removeToken(Token $token): bool
         {
             return $this->tokens->removeElement($token);
+        }
+
+        public function getAttempts(): Collection
+        {
+            return $this->attempts;
+        }
+
+        public function setAttempts(Collection $attempts): self
+        {
+            $this->attempts = $attempts;
+            return $this;
         }
     }
 }
