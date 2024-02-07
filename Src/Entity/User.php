@@ -5,6 +5,7 @@ namespace Temant\AuthManager\Entity {
     use DateTimeInterface;
     use Doctrine\Common\Collections\ArrayCollection;
     use Doctrine\Common\Collections\Collection;
+    use Doctrine\DBAL\Types\Types;
     use Doctrine\ORM\Mapping\Column;
     use Doctrine\ORM\Mapping\Entity;
     use Doctrine\ORM\Mapping\GeneratedValue;
@@ -33,7 +34,7 @@ namespace Temant\AuthManager\Entity {
         #[Column(name: 'password')]
         private string $password;
 
-        #[Column(name: 'is_activated')]
+        #[Column(name: 'is_activated', type: Types::BOOLEAN)]
         private bool $isActivated;
 
         #[Column(name: 'is_locked')]

@@ -321,8 +321,11 @@ namespace Temant\AuthManager {
          */
         public function activateAccount(string $userId): bool
         {
-            return !$this->isActivated($userId)
-                && $this->storage->modifyRow(self::TBL_AUTH_USER, ['is_activated' => true], ['user_id' => $userId]);
+            $user = $this->entityManager->getRepository(User::class)->findOneBy(['userId' => $userId]);
+            $user->setIsActivated(true);
+            $this->entityManager->persist($user);
+            $this->entityManager->flush();
+            return $user->getIsActivated();
         }
 
         /**
@@ -334,8 +337,11 @@ namespace Temant\AuthManager {
          */
         public function deactivateAccount(string $userId): bool
         {
-            return $this->isActivated($userId)
-                && $this->storage->modifyRow(self::TBL_AUTH_USER, ['is_activated' => false], ['user_id' => $userId]);
+            $user = $this->entityManager->getRepository(User::class)->findOneBy(['userId' => $userId]);
+            $user->setIsActivated(false);
+            $this->entityManager->persist($user);
+            $this->entityManager->flush();
+            return $user->getIsActivated();
         }
 
         /**
@@ -346,7 +352,10 @@ namespace Temant\AuthManager {
          */
         public function isActivated(string $userId): bool
         {
-            return (bool) $this->storage->getColumn(self::TBL_AUTH_USER, 'is_activated', ['user_id' => $userId]);
+            return $this->entityManager
+                ->getRepository(User::class)
+                ->findOneBy(['userId' => $userId])
+                ->getIsActivated();
         }
 
         /**
@@ -357,7 +366,10 @@ namespace Temant\AuthManager {
          */
         public function isLocked(string $userId): bool
         {
-            return (bool) $this->storage->getColumn(self::TBL_AUTH_USER, 'is_locked', ['user_id' => $userId]);
+            return $this->entityManager
+                ->getRepository(User::class)
+                ->findOneBy(['userId' => $userId])
+                ->getIsLocked();
         }
 
         /**
@@ -369,8 +381,11 @@ namespace Temant\AuthManager {
          */
         public function lockAccount(string $userId): bool
         {
-            return !$this->isLocked($userId)
-                && $this->storage->modifyRow(self::TBL_AUTH_USER, ['is_locked' => true], ['user_id' => $userId]);
+            $user = $this->entityManager->getRepository(User::class)->findOneBy(['userId' => $userId]);
+            $user->setIsLocked(true);
+            $this->entityManager->persist($user);
+            $this->entityManager->flush();
+            return $user->getIsLocked();
         }
 
         /**
@@ -382,8 +397,11 @@ namespace Temant\AuthManager {
          */
         public function unlockAccount(string $userId): bool
         {
-            return !$this->isLocked($userId)
-                && $this->storage->modifyRow(self::TBL_AUTH_USER, ['is_locked' => false], ['user_id' => $userId]);
+            $user = $this->entityManager->getRepository(User::class)->findOneBy(['userId' => $userId]);
+            $user->setIsLocked(false);
+            $this->entityManager->persist($user);
+            $this->entityManager->flush();
+            return $user->getIsLocked();
         }
 
         /**

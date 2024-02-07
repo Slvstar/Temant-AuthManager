@@ -12,11 +12,11 @@ use Temant\AuthManager\TokenManager;
 use Temant\DatabaseManager\DatabaseManager;
 use Temant\SessionManager\SessionManager;
 
-include_once __DIR__ . "/vendor/autoload.php";
+include_once __DIR__ . '/vendor/autoload.php';
 
-// Create a simple "default" Doctrine ORM configuration for Attributes
+// Create a simple 'default' Doctrine ORM configuration for Attributes
 $config = ORMSetup::createAttributeMetadataConfiguration(
-    paths: array(__DIR__ . "/Src"),
+    paths: array(__DIR__ . '/Src'),
     isDevMode: true,
 );
 // configuring the database connection
@@ -31,7 +31,7 @@ $connection = DriverManager::getConnection([
 $entityManager = new EntityManager($connection, $config);
 
 
-$user = $entityManager->getRepository(User::class)->findOneBy(['userId' => "Emad.A"]);
+$user = $entityManager->getRepository(User::class)->findOneBy(['userId' => 'Emad.A']);
 
 
 // $user->addToken((new Token())
@@ -62,6 +62,14 @@ $session->start([]);
 $db = new DatabaseManager(new mysqli('localhost', 'intradb', 'Proto!728agt22Ws', 'authentication'));
 
 $auth = new AuthManager($entityManager, new SessionManager, $storage = new DatabaseStorage($db), new ConfigManager($entityManager), new TokenManager($entityManager));
+
+if ($auth->isLocked('Emad.A')) {
+    $auth->unlockAccount('Emad.A');
+} else {
+    $auth->lockAccount('Emad.A');
+}
+
+exit;
 
 // dd($auth->getUserObject());
 
