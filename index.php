@@ -30,8 +30,8 @@ $connection = DriverManager::getConnection([
 $entityManager = new EntityManager($connection, $config);
 
 
-// $user = $entityManager->getRepository(User::class)->findOneBy(['userId' => "Emad.A"]);
-
+$user = $entityManager->getRepository(User::class)->findOneBy(['userId' => "Emad.A"]);
+dd($user);
 // $user->addToken((new Token())
 //     ->setUser($user)
 //     ->setType('remember_me')

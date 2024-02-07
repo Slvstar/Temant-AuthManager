@@ -49,153 +49,94 @@ namespace Temant\AuthManager\Entity {
             $this->tokens = new ArrayCollection;
         }
 
-        /**
-         * @return string
-         */
         public function getUserId(): string
         {
             return $this->userId;
         }
 
-        /**
-         * @param string $userId 
-         * @return self
-         */
         public function setUserId(string $userId): self
         {
             $this->userId = $userId;
             return $this;
         }
 
-        /**
-         * @return string
-         */
         public function getFirstName(): string
         {
             return $this->firstName;
         }
 
-        /**
-         * @param string $firstName 
-         * @return self
-         */
         public function setFirstName(string $firstName): self
         {
             $this->firstName = $firstName;
             return $this;
         }
 
-        /**
-         * @return string
-         */
         public function getLastName(): string
         {
             return $this->lastName;
         }
 
-        /**
-         * @param string $lastName 
-         * @return self
-         */
         public function setLastName(string $lastName): self
         {
             $this->lastName = $lastName;
             return $this;
         }
 
-        /**
-         * @return string
-         */
         public function getEmail(): string
         {
             return $this->email;
         }
 
-        /**
-         * @param string $email 
-         * @return self
-         */
         public function setEmail(string $email): self
         {
             $this->email = $email;
             return $this;
         }
 
-        /**
-         * @return string
-         */
         public function getPassword(): string
         {
             return $this->password;
         }
 
-        /**
-         * @param string $password 
-         * @return self
-         */
         public function setPassword(string $password): self
         {
             $this->password = $password;
             return $this;
         }
 
-        /**
-         * @return bool
-         */
         public function getIsActivated(): bool
         {
             return $this->isActivated;
         }
 
-        /**
-         * @param bool $isActivated 
-         * @return self
-         */
         public function setIsActivated(bool $isActivated): self
         {
             $this->isActivated = $isActivated;
             return $this;
         }
 
-        /**
-         * @return bool
-         */
         public function getIsLocked(): bool
         {
             return $this->isLocked;
         }
 
-        /**
-         * @param bool $isLocked 
-         * @return self
-         */
         public function setIsLocked(bool $isLocked): self
         {
             $this->isLocked = $isLocked;
             return $this;
         }
 
-        /**
-         * @return DateTimeInterface
-         */
         public function getCreatedAt(): DateTimeInterface
         {
             return $this->createdAt;
         }
 
-        /**
-         * @param DateTimeInterface $createdAt 
-         * @return self
-         */
         public function setCreatedAt(DateTimeInterface $createdAt): self
         {
             $this->createdAt = $createdAt;
             return $this;
         }
 
-        /**
-         * @return Collection
-         */
         public function getTokens(): Collection
         {
             return $this->tokens;
