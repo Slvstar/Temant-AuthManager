@@ -7,7 +7,6 @@ namespace Temant\AuthManager {
     use Doctrine\ORM\EntityManagerInterface;
     use Temant\AuthManager\Entity\Token;
     use Temant\AuthManager\Entity\User;
-    use Temant\AuthManager\Repository\TokenRepository;
 
     /**
      * Manages authentication tokens throughout their lifecycle, including creation, storage, retrieval, validation, and deletion.
@@ -17,8 +16,6 @@ namespace Temant\AuthManager {
      */
     class TokenManager // implements TokenManagerInterface
     {
-        private TokenRepository $tokenRepository;
-
         /**
          * Initializes the TokenManager with Doctrine's EntityManager for database operations.
          *
@@ -27,7 +24,6 @@ namespace Temant\AuthManager {
         public function __construct(
             private EntityManagerInterface $entityManager
         ) {
-            $this->tokenRepository = $this->entityManager->getRepository(Token::class);
         }
 
         /**
@@ -47,9 +43,23 @@ namespace Temant\AuthManager {
             return [$selector, $hashedValidator, "$selector:" . $validator];
         }
 
+        /**
+         * Finds tokens for a specific user and type.
+         *
+         * @param User $user The ID of the user.
+         * @param string $type The type of tokens to find.
+         * @return Token[] An array of Token entities for the given user.
+         */
+        public function findByUserAndType(User $user, string $type): array
+        {
+            return $user->getTokens()
+                ->filter(fn($token): bool => $token->getType() === $type)
+                ->toArray();
+        }
+
         public function removeTokensForUserByType(User $user, string $type)
         {
-            $tokens = $this->tokenRepository->findByUserAndType($user, $type);
+            $tokens = $this->findByUserAndType($user, $type);
 
             foreach ($tokens as $token) {
                 $this->entityManager->remove($token);
@@ -81,14 +91,17 @@ namespace Temant\AuthManager {
          */
         public function saveToken(User $user, string $type, string $selector, string $validator, int $days = 1): bool
         {
-            return $this->tokenRepository->saveToken(
-                (new Token())
-                    ->setUser($user)
-                    ->setType($type)
-                    ->setSelector($selector)
-                    ->setValidator($validator)
-                    ->setExpiresAt((new DateTime())->add(new DateInterval('P' . $days . 'D')))
-            );
+            $token = (new Token())
+                ->setUser($user)
+                ->setType($type)
+                ->setSelector($selector)
+                ->setValidator($validator)
+                ->setExpiresAt((new DateTime())->add(new DateInterval('P' . $days . 'D')));
+
+            $this->entityManager->persist($token);
+            $this->entityManager->flush();
+
+            return !is_null($this->entityManager->getRepository(Token::class)->find($token->getId()));
         }
 
         /**

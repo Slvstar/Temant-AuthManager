@@ -10,9 +10,8 @@ namespace Temant\AuthManager\Entity {
     use Doctrine\ORM\Mapping\JoinColumn;
     use Doctrine\ORM\Mapping\ManyToOne;
     use Doctrine\ORM\Mapping\Table;
-    use Temant\AuthManager\Repository\TokenRepository;
 
-    #[Entity(repositoryClass: TokenRepository::class)]
+    #[Entity]
     #[Table(name: "authentication_tokens")]
     class Token
     {
