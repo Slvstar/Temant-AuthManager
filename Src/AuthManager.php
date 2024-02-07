@@ -11,7 +11,7 @@ namespace Temant\AuthManager {
 
     class AuthManager implements AuthManagerInterface
     {
-        private const TBL_AUTH_USER = 'auth_user';
+        private const TBL_AUTH_USER = 'authentication_users';
 
         /**
          * @param SessionManagerInterface $session
@@ -217,7 +217,7 @@ namespace Temant\AuthManager {
             [$selector, $validator] = TokenManager::parseToken($token);
 
             // Query the storage to find the user ID associated with the provided selector and validator
-            // Then, retrieve the user's row from the 'auth_user' table using the found user ID
+            // Then, retrieve the user's row from the 'authentication_users' table using the found user ID
             return $this->storage->getRow(self::TBL_AUTH_USER, ['user_id' => $this->storage->getColumn('authentication_tokens', 'user_id', ['selector' => $selector, 'validator' => $validator])]);
         }
 

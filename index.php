@@ -28,13 +28,13 @@ $connection = DriverManager::getConnection([
 $entityManager = new EntityManager($connection, $config);
 
 
-$tokenManager = new TokenManager($entityManager);
+// $tokenManager = new TokenManager($entityManager);
 
-dd($tokenManager->listExpiredTokens());
+// dd($tokenManager->listExpiredTokens());
 
 
-dd($tokenManager->saveToken('Test', 'Test', 'Test', 'Test'));
-dd($tokenManager->cleanupExpiredTokens());
+// dd($tokenManager->saveToken('Test', 'Test', 'Test', 'Test'));
+// dd($tokenManager->cleanupExpiredTokens());
 
 
 
@@ -51,9 +51,9 @@ $auth = new AuthManager($entityManager, $session, $storage = new DatabaseStorage
 $auth->countFailedAuthenticationAttempts('Emad.A', 111111);
 // dd($auth->registerUser('Emadov', 'Almahdi', 'emad@almahdi.se', 'Slvstar123@'));
 try {
+    var_dump($auth->authenticate('Emad.A', 'Slvstar123@', true));
     var_dump($auth->isAuthenticated());
     var_dump($auth->isActivated('Emad.A'));
-    var_dump($auth->authenticate('Emad.A', 'Slvstar123@', true));
     var_dump($auth->isAuthenticated());
     var_dump($auth->deauthenticate());
     var_dump($auth->isAuthenticated());

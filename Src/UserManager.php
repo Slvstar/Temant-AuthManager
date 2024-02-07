@@ -32,7 +32,7 @@ namespace Temant\AuthManager {
          */
         public function byUserId(string $userId): ?self
         {
-            $userData = $this->storage->getRow('auth_user', ['user_id' => $userId]);
+            $userData = $this->storage->getRow('authentication_users', ['user_id' => $userId]);
 
             // If no user data is found, return null.
             if (!$userData) {
