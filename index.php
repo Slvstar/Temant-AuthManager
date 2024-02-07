@@ -61,6 +61,8 @@ $db = new DatabaseManager(new mysqli('localhost', 'intradb', 'Proto!728agt22Ws',
 
 $auth = new AuthManager($entityManager, $session, $storage = new DatabaseStorage($db), new ConfigManager($entityManager), new TokenManager($entityManager));
 
+dd($auth->getUserObject());
+
 ($auth->listAuthenticationAttempts('Emad.A'));
 
 $auth->countFailedAuthenticationAttempts('Emad.A', 111111);

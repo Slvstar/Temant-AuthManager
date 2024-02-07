@@ -29,6 +29,14 @@ namespace Temant\AuthManager {
         ) {
         }
 
+        public function getUserObject(): ?User
+        {
+            if ($this->isAuthenticated()) {
+                return $this->entityManager->getRepository(User::class)->findOneBy(['userId' => $this->session->get('user_id')]);
+            }
+            throw new \Exception("Error Processing Request", 1);
+        }
+
         /**
          * Authenticates a user by verifying their provided credentials against stored records.
          * This method is typically called during the login process.
