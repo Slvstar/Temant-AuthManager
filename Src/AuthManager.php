@@ -30,14 +30,6 @@ namespace Temant\AuthManager {
         ) {
         }
 
-        public function getUserObject(): ?User
-        {
-            if ($this->isAuthenticated()) {
-                return $this->entityManager->getRepository(User::class)->findOneBy(['userId' => $this->session->get('user_id')]);
-            }
-            throw new \Exception("Error Processing Request", 1);
-        }
-
         /**
          * Authenticates a user by verifying their provided credentials against stored records.
          * This method is typically called during the login process.
@@ -49,7 +41,7 @@ namespace Temant\AuthManager {
          */
         public function authenticate(string $userId, string $password, bool $remember = false): bool
         {
-            $user = $this->getUser($userId);
+            $user = $this->entityManager->getRepository(User::class)->findOneBy(['userId' => $userId]);
 
             // Check if user exists
             if (!$user) {
@@ -62,6 +54,7 @@ namespace Temant\AuthManager {
                 $this->logAuthenticationAttempt($userId, false, 'User not activated');
                 return false;
             }
+
 
             // Check if password is correct
             if (!$this->verifyPassword($userId, $password)) {
@@ -142,7 +135,7 @@ namespace Temant\AuthManager {
         {
             // delete the user token
             $this->tokenManager
-                ->removeTokensForUserByType($this->entityManager->getRepository(User::class)->findOneBy(['userId' => $this->session->get('user_id')]), 'remember_me');
+                ->removeTokensForUserByType($this->getLoggedInUser(), 'remember_me');
 
             // remove the remember_me cookie
             CookieManager::delete($this->configManager->get('remember_me_cookie_name'));
@@ -277,11 +270,10 @@ namespace Temant\AuthManager {
          */
         public function changePassword(string $userId, string $newPassword): bool
         {
-            return $this->storage->modifyRow(
-                self::TBL_AUTH_USER,
-                ['password' => $this->hashPassword($newPassword)],
-                ['user_id' => $userId]
-            );
+            $user = $this->entityManager->getRepository(User::class)->findOneBy(['userId' => $userId]);
+            $this->entityManager->persist($user->setPassword($this->hashPassword($newPassword)));
+            $this->entityManager->flush();
+            return true;
         }
 
         /**
@@ -304,10 +296,13 @@ namespace Temant\AuthManager {
          */
         private function verifyPassword(string $userId, string $password): bool
         {
-            $hashedPassword = $this->storage->getColumn(self::TBL_AUTH_USER, 'password', ['user_id' => $userId]);
-            if (password_needs_rehash($hashedPassword, PASSWORD_BCRYPT)) {
+            $hashedPassword = $this->entityManager
+                ->getRepository(User::class)
+                ->findOneBy(['userId' => $userId])
+                ->getPassword();
+
+            if (password_needs_rehash($hashedPassword, PASSWORD_DEFAULT, ["cost" => 12])) {
                 $this->changePassword($userId, $hashedPassword);
-                $hashedPassword = $this->storage->getColumn(self::TBL_AUTH_USER, 'password', ['user_id' => $userId]);
             }
             return password_verify($password, $hashedPassword);
         }
@@ -433,12 +428,14 @@ namespace Temant\AuthManager {
          * This method is often used to fetch user profile data, settings, or other relevant information
          * stored in the user's record.
          *
-         * @param string $userId The unique identifier of the user whose information is to be retrieved.
-         * @return UserManager|null Object containing the user's information if the user is found, or null if no user with the given ID exists.
+         * @return User|null Object containing the user's information if the user is found, or null if no user with the given ID exists.
          */
-        public function getUser($userId): ?UserManager
+        public function getLoggedInUser(): ?User
         {
-            return (new UserManager($this->storage))->byUserId($userId);
+            if ($this->isAuthenticated()) {
+                return $this->entityManager->getRepository(User::class)->findOneBy(['userId' => $this->session->get('user_id')]);
+            }
+            return null;
         }
 
         /**

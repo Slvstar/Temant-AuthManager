@@ -63,24 +63,19 @@ $db = new DatabaseManager(new mysqli('localhost', 'intradb', 'Proto!728agt22Ws',
 
 $auth = new AuthManager($entityManager, new SessionManager, $storage = new DatabaseStorage($db), new ConfigManager($entityManager), new TokenManager($entityManager));
 
-if ($auth->isLocked('Emad.A')) {
-    $auth->unlockAccount('Emad.A');
-} else {
-    $auth->lockAccount('Emad.A');
-}
-
-exit;
-
 // dd($auth->getUserObject());
 
 ($auth->listAuthenticationAttempts('Emad.A'));
 
 $auth->countFailedAuthenticationAttempts('Emad.A', 111111);
-dd($auth->registerUser('Emad', 'Almahdi', 'emad@alddmahfffdi.se', 'Slvstar123@'));
-// var_dump($auth->authenticate('Emad.A', 'Slvstar123@', true));
+
+// $auth->changePassword('Emad.A', 'Slvstar123@');
+// ($auth->registerUser('Emad', 'Almahdi', 'emad@alddmahfffdi.se', 'Slvstar123@'));
+ ($auth->authenticate('Emad.A', 'Slvstar123@', true));
+
 //$session->destroy();
 var_dump($auth->isAuthenticated());
 // var_dump($auth->isActivated('Emad.A'));
 // var_dump($auth->isAuthenticated());
-// var_dump($auth->deauthenticate());
+var_dump($auth->deauthenticate());
 // var_dump($auth->isAuthenticated());

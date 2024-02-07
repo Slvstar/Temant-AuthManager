@@ -1,6 +1,7 @@
 <?php declare(strict_types=1);
 
 namespace Temant\AuthManager {
+    use Temant\AuthManager\Entity\User;
 
     interface AuthManagerInterface
     {
@@ -162,10 +163,9 @@ namespace Temant\AuthManager {
          * This method is often used to fetch user profile data, settings, or other relevant information
          * stored in the user's record.
          *
-         * @param string $userId The unique identifier of the user whose information is to be retrieved.
-         * @return UserManager Object containing the user's information if the user is found, or null if no user with the given ID exists.
+         * @return User|null Object containing the user's information if the user is found, or null if no user with the given ID exists.
          */
-        public function getUser(string $userId);
+        public function getLoggedInUser(): ?User;
 
         /**
          * Verifies a user's email using a token composed of a selector and a validator.
