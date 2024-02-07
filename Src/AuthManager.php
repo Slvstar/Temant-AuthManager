@@ -131,8 +131,10 @@ namespace Temant\AuthManager {
         public function deauthenticate(): bool
         {
             // delete the user token
-            $this->tokenManager
-                ->removeTokensForUserByType($this->getLoggedInUser(), 'remember_me');
+            if ($this->getLoggedInUser()) {
+                $this->tokenManager
+                    ->removeTokensForUserByType($this->getLoggedInUser(), 'remember_me');
+            }
 
             // remove the remember_me cookie
             CookieManager::delete($this->configManager->get('remember_me_cookie_name'));
