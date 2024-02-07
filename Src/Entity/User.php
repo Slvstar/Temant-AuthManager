@@ -5,111 +5,41 @@ namespace Temant\AuthManager\Entity {
     use DateTimeInterface;
     use Doctrine\ORM\Mapping\Column;
     use Doctrine\ORM\Mapping\Entity;
-    use Doctrine\ORM\Mapping\GeneratedValue;
     use Doctrine\ORM\Mapping\Id;
     use Doctrine\ORM\Mapping\Table;
 
     #[Entity]
-    #[Table(name: "authentication_users")]
+    #[Table(name: 'authentication_users')]
     class User
     {
         #[Id]
-        #[GeneratedValue]
-        #[Column]
-        private ?int $id = null;
-
-        #[Column(name: "user_id")]
+        #[Column(name: 'user_id')]
         private string $userId;
 
-        #[Column]
-        private bool $success;
+        #[Column(name: 'first_name')]
+        private string $firstName;
 
-        #[Column]
-        private ?string $reason = null;
+        #[Column(name: 'last_name')]
+        private string $lastName;
 
-        #[Column(name: "ip_address")]
-        private string $ipAddress;
+        #[Column(name: 'email')]
+        private string $email;
 
-        #[Column(name: "user_agent")]
-        private ?string $userAgent = null;
+        #[Column(name: 'password')]
+        private string $password;
 
-        #[Column(type: "datetime")]
-        private DateTimeInterface $timestamp;
+        #[Column(name: 'is_activated')]
+        private bool $isActivated;
+
+        #[Column(name: 'is_locked')]
+        private bool $isLocked;
+
+        #[Column(name: 'created_at')]
+        private DateTimeInterface $createdAt;
 
         public function __construct()
         {
-            $this->timestamp = new DateTime();
-        }
-
-        public function getId(): ?int
-        {
-            return $this->id;
-        }
-
-        public function getUserId(): string
-        {
-            return $this->userId;
-        }
-
-        public function setUserId(string $userId): self
-        {
-            $this->userId = $userId;
-            return $this;
-        }
-
-        public function getSuccess(): bool
-        {
-            return $this->success;
-        }
-
-        public function setSuccess(bool $success): self
-        {
-            $this->success = $success;
-            return $this;
-        }
-
-        public function getReason(): ?string
-        {
-            return $this->reason;
-        }
-
-        public function setReason(?string $reason): self
-        {
-            $this->reason = $reason;
-            return $this;
-        }
-
-        public function getIpAddress(): string
-        {
-            return $this->ipAddress;
-        }
-
-        public function setIpAddress(string $ipAddress): self
-        {
-            $this->ipAddress = $ipAddress;
-            return $this;
-        }
-
-        public function getUserAgent(): ?string
-        {
-            return $this->userAgent;
-        }
-
-        public function setUserAgent(?string $userAgent): self
-        {
-            $this->userAgent = $userAgent;
-            return $this;
-        }
-
-        public function getTimestamp(): DateTimeInterface
-        {
-            return $this->timestamp;
-        }
-
-        public function setTimestamp(DateTimeInterface $timestamp): self
-        {
-            $this->timestamp = $timestamp;
-            return $this;
+            $this->createdAt = new DateTime();
         }
     }
 }
