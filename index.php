@@ -32,7 +32,8 @@ $entityManager = new EntityManager($connection, $config);
 
 
 $user = $entityManager->getRepository(User::class)->findOneBy(['userId' => "Emad.A"]);
-dd($user);
+
+
 // $user->addToken((new Token())
 //     ->setUser($user)
 //     ->setType('remember_me')
@@ -60,16 +61,17 @@ $session->start([]);
 
 $db = new DatabaseManager(new mysqli('localhost', 'intradb', 'Proto!728agt22Ws', 'authentication'));
 
-$auth = new AuthManager($entityManager, $session, $storage = new DatabaseStorage($db), new ConfigManager($entityManager), new TokenManager($entityManager));
+$auth = new AuthManager($entityManager, new SessionManager, $storage = new DatabaseStorage($db), new ConfigManager($entityManager), new TokenManager($entityManager));
 
-dd($auth->getUserObject());
+// dd($auth->getUserObject());
 
 ($auth->listAuthenticationAttempts('Emad.A'));
 
 $auth->countFailedAuthenticationAttempts('Emad.A', 111111);
-// dd($auth->registerUser('Emadov', 'Almahdi', 'emad@almahdi.se', 'Slvstar123@'));
-var_dump($auth->authenticate('Emad.A', 'Slvstar123@', true));
-// var_dump($auth->isAuthenticated());
+dd($auth->registerUser('Emad', 'Almahdi', 'emad@alddmahfffdi.se', 'Slvstar123@'));
+// var_dump($auth->authenticate('Emad.A', 'Slvstar123@', true));
+//$session->destroy();
+var_dump($auth->isAuthenticated());
 // var_dump($auth->isActivated('Emad.A'));
 // var_dump($auth->isAuthenticated());
 // var_dump($auth->deauthenticate());

@@ -4,6 +4,7 @@ namespace Temant\AuthManager {
     use Doctrine\ORM\EntityManager;
     use Temant\AuthManager\Config\ConfigManagerInterface;
     use Temant\AuthManager\Entity\AuthenticationAttempt;
+    use Temant\AuthManager\Entity\Token;
     use Temant\AuthManager\Entity\User;
     use Temant\AuthManager\Storage\StorageInterface;
     use Temant\AuthManager\Utils\Utils;
@@ -200,9 +201,9 @@ namespace Temant\AuthManager {
                 $user = $this->findUserByToken($token);
                 if ($user) {
                     $this->session->regenerate();
-                    $this->deleteAuthenticationAttempts($user['user_id']);
-                    $this->logAuthenticationAttempt($user['user_id'], true);
-                    $this->session->set('user_id', $user['user_id']);
+                    $this->deleteAuthenticationAttempts($user->getUserId());
+                    $this->logAuthenticationAttempt($user->getUserId(), true);
+                    $this->session->set('user_id', $user->getUserId());
                     return true;
                 }
             }
@@ -219,14 +220,11 @@ namespace Temant\AuthManager {
          * @param string $token The remember-me token associated with a user.
          * @return mixed[]|null An array of user data if a user is found, or null if no user is found.
          */
-        private function findUserByToken(string $token): ?array
+        private function findUserByToken(string $token): User
         {
             // Parse the token to extract the selector and validator components
-            [$selector, $validator] = TokenManager::parseToken($token);
-
-            // Query the storage to find the user ID associated with the provided selector and validator
-            // Then, retrieve the user's row from the 'authentication_users' table using the found user ID
-            return $this->storage->getRow(self::TBL_AUTH_USER, ['user_id' => $this->storage->getColumn('authentication_tokens', 'user_id', ['selector' => $selector, 'validator' => $validator])]);
+            [$selector] = TokenManager::parseToken($token);
+            return $this->entityManager->getRepository(Token::class)->findOneBy(['selector' => $selector])->getUser();
         }
 
         /**
@@ -398,9 +396,16 @@ namespace Temant\AuthManager {
         {
             $userId = sprintf('%s.%s', ucfirst($firstName), ucfirst(substr($lastName, 0, 1)));
 
-            $count = count($this->storage->getRows(self::TBL_AUTH_USER, ['user_id' => ["$userId%", 'LIKE']]));
-            if ($count > 0) {
-                return $userId . $count++;
+            $currentUsers = count($this->entityManager
+                ->getRepository(User::class)
+                ->createQueryBuilder('u')
+                ->select('u.userId')->where('u.userId LIKE :userId')
+                ->setParameter('userId', "$userId%")
+                ->getQuery()
+                ->execute());
+
+            if ($currentUsers > 0) {
+                return $userId . ++$currentUsers;
             }
             return $userId;
         }
@@ -434,14 +439,19 @@ namespace Temant\AuthManager {
         {
             $userId = $this->generateUserId($firstName, $lastName);
 
+            $newUser = (new User)
+                ->setUserId($userId)
+                ->setFirstName($firstName)
+                ->setLastName($lastName)
+                ->setEmail($email)
+                ->setPassword($this->hashPassword($password))
+                ->setIsActivated(false)
+                ->setIsLocked(false);
+
+            $this->entityManager->persist($newUser);
+            $this->entityManager->flush();
+
             $userObject = $this->entityManager->getRepository(User::class)->findOneBy(['userId' => $userId]);
-            $this->storage->insertRow(self::TBL_AUTH_USER, [
-                'user_id' => $userId,
-                'first_name' => $firstName,
-                'last_name' => $lastName,
-                'email' => $email,
-                'password' => $this->hashPassword($password)
-            ]);
 
             if ($this->configManager->get('mail_verify') === 'enabled') {
                 [$selector, $validator] = TokenManager::generateToken();
@@ -455,7 +465,7 @@ namespace Temant\AuthManager {
 
         public function verifyEmail(string $userId, string $selector, string $validator): bool
         {
-            $email = $this->storage->getColumn(self::TBL_AUTH_USER, 'email', ['user_id' => $userId]);
+            $email = $this->entityManager->getRepository(User::class)->findOneBy(['userId' => $userId])->getEmail();
             // set email subject & body
             $subject = 'Please activate your account';
             $message = <<<MESSAGE
@@ -464,6 +474,7 @@ namespace Temant\AuthManager {
                 "https://authy/activate.php?email=$email&selector=$selector&validator=$validator"
                 MESSAGE;
             // send the email
+
             return mail($email, $subject, nl2br($message), "From:no-reply@email.com");
         }
     }
