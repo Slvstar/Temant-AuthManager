@@ -6,6 +6,7 @@ use Temant\AuthManager\AuthManager;
 use Temant\AuthManager\Config\ConfigManager;
 use Temant\AuthManager\Entity\Token;
 use Temant\AuthManager\Entity\User;
+use Temant\AuthManager\Entity\UserRole;
 use Temant\AuthManager\Storage\DatabaseStorage;
 use Temant\AuthManager\TokenManager;
 use Temant\DatabaseManager\DatabaseManager;

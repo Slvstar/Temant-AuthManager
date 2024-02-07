@@ -9,6 +9,7 @@ namespace Temant\AuthManager\Entity {
     use Doctrine\ORM\Mapping\Entity;
     use Doctrine\ORM\Mapping\Id;
     use Doctrine\ORM\Mapping\OneToMany;
+    use Doctrine\ORM\Mapping\OneToOne;
     use Doctrine\ORM\Mapping\Table;
 
     #[Entity]
@@ -40,7 +41,7 @@ namespace Temant\AuthManager\Entity {
         #[Column(name: 'created_at', type: "datetime")]
         private DateTimeInterface $createdAt;
 
-        #[OneToMany(targetEntity: Token::class, mappedBy: "user", cascade: ["all"])]
+        #[OneToMany(targetEntity: Token::class, mappedBy: "user", cascade: ["persist", "remove"])]
         private Collection $tokens;
 
         public function __construct()
