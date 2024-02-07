@@ -15,7 +15,7 @@ class GroupPermissionsManager
     public function get(): ?array
     {
         foreach ($this->storage->getRows('auth_role_permission', ['role_id' => $this->groupId]) as $permission) {
-            $permissionData = $this->storage->getRow('auth_permission', ['id' => $permission['permission_id']]);
+            $permissionData = $this->storage->getRow('authentication_permissions', ['id' => $permission['permission_id']]);
             $permissions[$permissionData['name']] = $permissionData['description'];
         }
         return isset($permissions) ? $permissions : null;
