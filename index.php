@@ -61,6 +61,11 @@ try {
 
     $auth = new AuthManager($entityManager, new SessionManager, new ConfigManager($entityManager), new TokenManager($entityManager));
 
+    dd($auth->getLastAuthenticationStatus($user));
+    dump($auth->listAuthenticationAttempts($user));
+    dd($auth->countFailedAuthenticationAttempts($user, (new DateTime)->sub(new DateInterval('PT30M'))));
+    $auth->deactivateAccount($user);
+    exit;
     // dd($auth->getUserObject());
 
     // dump($auth->listAuthenticationAttempts($user));

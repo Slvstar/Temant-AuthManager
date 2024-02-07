@@ -1,6 +1,9 @@
 <?php declare(strict_types=1);
 
 namespace Temant\AuthManager {
+    use DateTime;
+    use DateTimeInterface;
+    use Doctrine\Common\Collections\ArrayCollection;
     use Doctrine\ORM\EntityManager;
     use Temant\AuthManager\Config\ConfigManagerInterface;
     use Temant\AuthManager\Entity\AuthenticationAttempt;
@@ -46,7 +49,7 @@ namespace Temant\AuthManager {
             }
 
             // Check if user is activated
-            if (!$this->isActivated($username)) {
+            if (!$this->isActivated($user)) {
                 $this->logAuthenticationAttempt($user, false, 'User not activated');
                 return false;
             }
@@ -110,11 +113,15 @@ namespace Temant\AuthManager {
          * @param int $timePeriod The period of time in seconds during which to count the failed attempts.
          * @return int The number of failed login attempts within the specified time period.
          */
-        public function countFailedAuthenticationAttempts(User $user, int $timePeriod = 1): int
+        public function countFailedAuthenticationAttempts(User $user, DateTimeInterface $timePeriod = new DateTime): int
         {
-            return count($this->entityManager
-                ->getRepository(AuthenticationAttempt::class)
-                ->findBy(['user' => $user, "success" => false]));
+            return $user->getAttempts()
+                ->filter(
+                    fn(AuthenticationAttempt $attempt): bool =>
+                    $attempt->getSuccess() === false
+                    && $attempt->getCreatedAt() >= $timePeriod
+                )
+                ->count();
         }
 
         /**
@@ -130,7 +137,6 @@ namespace Temant\AuthManager {
                 $this->tokenManager
                     ->removeTokensForUserByType($this->getLoggedInUser(), 'remember_me');
             }
-
 
             // remove the remember_me cookie
             CookieManager::delete($this->configManager->get('remember_me_cookie_name'));
@@ -165,11 +171,11 @@ namespace Temant\AuthManager {
          */
         public function getLastAuthenticationStatus(User $user): ?bool
         {
-            $result = $this->entityManager
-                ->getRepository(AuthenticationAttempt::class)
-                ->findOneBy(['user' => $user], ['created_at' => "DESC"]);
-
-            return $result ? $result->getSuccess() : null;
+            /** @var AuthenticationAttempt */
+            $lastAttempt = $user->getAttempts()->last();
+            return ($lastAttempt instanceof AuthenticationAttempt)
+                ? $lastAttempt->getSuccess()
+                : null;
         }
 
         /**
@@ -227,9 +233,7 @@ namespace Temant\AuthManager {
          */
         public function listAuthenticationAttempts(User $user): array
         {
-            return $this->entityManager
-                ->getRepository(AuthenticationAttempt::class)
-                ->findBy(['user' => $user]);
+            return $user->getAttempts()->toArray();
         }
 
         /**
@@ -264,14 +268,11 @@ namespace Temant\AuthManager {
          *
          * @param User $user The unique identifier of the user whose password is to be changed. This could be their username, email address, or any system-specific user ID.
          * @param string $newPassword The new password that will replace the user's current password. This password will be hashed before storage for security.
-         * @return bool Returns true if the password change is successful, false otherwise. A false return value might indicate an issue with updating the user record in the database.
          */
-        public function changePassword(User $user, string $newPassword): bool
+        public function changePassword(User $user, string $newPassword): void
         {
-            $user = $this->entityManager->getRepository(User::class)->find($user->getId());
-            $this->entityManager->persist($user->setPassword($this->hashPassword($newPassword)));
+            $user->setPassword($this->hashPassword($newPassword));
             $this->entityManager->flush();
-            return true;
         }
 
         /**
@@ -294,10 +295,7 @@ namespace Temant\AuthManager {
          */
         private function verifyPassword(User $user, string $password): bool
         {
-            $hashedPassword = $this->entityManager
-                ->getRepository(User::class)
-                ->find($user->getId())
-                ->getPassword();
+            $hashedPassword = $user->getPassword();
 
             if (password_needs_rehash($hashedPassword, PASSWORD_DEFAULT, ["cost" => 12])) {
                 $this->changePassword($user, $hashedPassword);
@@ -309,92 +307,70 @@ namespace Temant\AuthManager {
          * Activates a user's account, typically used after account creation or reactivation
          * to allow the user to login and access the system.
          *
-         * @param string $username The unique identifier of the user whose account is to be activated.
-         * @return bool Returns true if the account is successfully activated, false otherwise.
+         * @param User $user The unique identifier of the user whose account is to be activated. 
          */
-        public function activateAccount(string $username): bool
+        public function activateAccount(User $user): void
         {
-            $user = $this->entityManager->getRepository(User::class)->findOneBy(['username' => $username]);
             $user->setIsActivated(true);
-            $this->entityManager->persist($user);
             $this->entityManager->flush();
-            return $user->getIsActivated();
         }
 
         /**
          * Deactivates a user's account, effectively preventing them from logging in and accessing the system.
          * This can be used for administrative purposes or at the user's request for account deactivation.
          *
-         * @param string $username The unique identifier of the user whose account is to be deactivated.
-         * @return bool Returns true if the account is successfully deactivated, false otherwise.
+         * @param User $user The unique identifier of the user whose account is to be deactivated.
          */
-        public function deactivateAccount(string $username): bool
+        public function deactivateAccount(User $user): void
         {
-            $user = $this->entityManager->getRepository(User::class)->findOneBy(['username' => $username]);
             $user->setIsActivated(false);
-            $this->entityManager->persist($user);
             $this->entityManager->flush();
-            return $user->getIsActivated();
         }
 
         /**
          * Checks whether a user's account is currently activated.
          *
-         * @param string $username The unique identifier of the user whose account activation status is to be checked.
+         * @param User $user The unique identifier of the user whose account activation status is to be checked.
          * @return bool Returns true if the account is currently activated, allowing login and access to the system, or false if the account is deactivated.
          */
-        public function isActivated(string $username): bool
+        public function isActivated(User $user): bool
         {
-            return $this->entityManager
-                ->getRepository(User::class)
-                ->findOneBy(['username' => $username])
-                ->getIsActivated();
+            return $user->getIsActivated();
         }
 
         /**
          * Checks whether a user's account is currently locked.
          *
-         * @param string $username The unique identifier of the user whose account lock status is to be checked.
+         * @param User $user The unique identifier of the user whose account lock status is to be checked.
          * @return bool Returns true if the account is currently locked, false otherwise.
          */
-        public function isLocked(string $username): bool
+        public function isLocked(User $user): bool
         {
-            return $this->entityManager
-                ->getRepository(User::class)
-                ->findOneBy(['username' => $username])
-                ->getIsLocked();
+            return $user->getIsLocked();
         }
 
         /**
          * Temporarily locks a user's account for a specified duration.
          * This can be used as a security measure after a certain number of failed login attempts or for administrative reasons.
          *
-         * @param string $username The unique identifier of the user whose account is to be locked.
-         * @return bool Returns true if the account is successfully locked, false otherwise.
+         * @param User $user The unique identifier of the user whose account is to be locked.
          */
-        public function lockAccount(string $username): bool
+        public function lockAccount(User $user): void
         {
-            $user = $this->entityManager->getRepository(User::class)->findOneBy(['username' => $username]);
             $user->setIsLocked(true);
-            $this->entityManager->persist($user);
             $this->entityManager->flush();
-            return $user->getIsLocked();
         }
 
         /**
          * Unlocks a user's account, allowing them to login again.
          * This method can be used to restore access for a user whose account was previously locked.
          *
-         * @param string $username The unique identifier of the user whose account is to be unlocked.
-         * @return bool Returns true if the account is successfully unlocked, false otherwise.
+         * @param User $user The unique identifier of the user whose account is to be unlocked.
          */
-        public function unlockAccount(string $username): bool
+        public function unlockAccount(User $user): void
         {
-            $user = $this->entityManager->getRepository(User::class)->findOneBy(['username' => $username]);
             $user->setIsLocked(false);
-            $this->entityManager->persist($user);
             $this->entityManager->flush();
-            return $user->getIsLocked();
         }
 
         /**

@@ -50,6 +50,9 @@ namespace Temant\AuthManager\Entity {
         private Collection $tokens;
 
         #[OneToMany(targetEntity: AuthenticationAttempt::class, mappedBy: "user", cascade: ["persist", "remove"])]
+        /**
+         * @var Collection<AuthenticationAttempt>
+         */
         private Collection $attempts;
 
         public function __construct()
@@ -171,6 +174,11 @@ namespace Temant\AuthManager\Entity {
             return $this->tokens->removeElement($token);
         }
 
+        /**
+         * The function "getAttempts" returns a collection of attempts.
+         * 
+         * @return Collection<AuthenticationAttempt> a Collection of attempts.
+         */
         public function getAttempts(): Collection
         {
             return $this->attempts;
