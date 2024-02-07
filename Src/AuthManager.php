@@ -90,7 +90,6 @@ namespace Temant\AuthManager {
             $this->tokenManager
                 ->removeTokensForUserByType($user, 'remember_me');
 
-
             // Retrieve the token lifetime from configuration, determining how long the token should be valid
             $lifeTime = (int) $this->configManager->get('remember_me_token_lifetime');
 
@@ -130,6 +129,7 @@ namespace Temant\AuthManager {
                 $this->tokenManager
                     ->removeTokensForUserByType($this->getLoggedInUser(), 'remember_me');
             }
+
 
             // remove the remember_me cookie
             CookieManager::delete($this->configManager->get('remember_me_cookie_name'));
@@ -428,7 +428,9 @@ namespace Temant\AuthManager {
         public function getLoggedInUser(): ?User
         {
             if ($this->isAuthenticated()) {
-                return $this->entityManager->getRepository(User::class)->findOneBy(['userId' => $this->session->get('user_id')]);
+                return $this->entityManager
+                    ->getRepository(User::class)
+                    ->findOneBy(['username' => $this->session->get('user_id')]);
             }
             return null;
         }
