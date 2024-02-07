@@ -47,6 +47,16 @@ namespace Temant\AuthManager {
             return [$selector, $hashedValidator, "$selector:" . $validator];
         }
 
+        public function removeTokensForUserByType(User $user, string $type)
+        {
+            $tokens = $this->tokenRepository->findByUserAndType($user, $type);
+
+            foreach ($tokens as $token) {
+                $this->entityManager->remove($token);
+                $this->entityManager->flush();
+            }
+        }
+
         /**
          * Decomposes a token into its constituent selector and validator components.
          *

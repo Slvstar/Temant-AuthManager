@@ -66,8 +66,8 @@ $auth = new AuthManager($entityManager, $session, $storage = new DatabaseStorage
 $auth->countFailedAuthenticationAttempts('Emad.A', 111111);
 // dd($auth->registerUser('Emadov', 'Almahdi', 'emad@almahdi.se', 'Slvstar123@'));
 var_dump($auth->authenticate('Emad.A', 'Slvstar123@', true));
-var_dump($auth->isAuthenticated());
-var_dump($auth->isActivated('Emad.A'));
-var_dump($auth->isAuthenticated());
-var_dump($auth->deauthenticate());
-var_dump($auth->isAuthenticated());
+// var_dump($auth->isAuthenticated());
+// var_dump($auth->isActivated('Emad.A'));
+// var_dump($auth->isAuthenticated());
+// var_dump($auth->deauthenticate());
+// var_dump($auth->isAuthenticated());

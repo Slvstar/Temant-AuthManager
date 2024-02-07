@@ -94,10 +94,8 @@ namespace Temant\AuthManager {
 
             // Remove all existing tokens associated with the user ID for 'remember_me' type
             // to prevent multiple valid tokens for the same user
-            $this->tokenManager->removeToken([
-                'userId' => $user,
-                'type' => 'remember_me'
-            ]);
+            $this->tokenManager
+                ->removeTokensForUserByType($user, 'remember_me');
 
             // Retrieve the token lifetime from configuration, determining how long the token should be valid
             $lifeTime = (int) $this->configManager->get('remember_me_token_lifetime');
@@ -134,10 +132,8 @@ namespace Temant\AuthManager {
         public function deauthenticate(): bool
         {
             // delete the user token
-            $this->tokenManager->removeToken([
-                'userId' => $this->session->get('user_id'),
-                'type' => 'remember_me'
-            ]);
+            $this->tokenManager
+                ->removeTokensForUserByType($this->entityManager->getRepository(User::class)->findOneBy(['userId' => $this->session->get('user_id')]), 'remember_me');
 
             // remove the remember_me cookie
             CookieManager::delete($this->configManager->get('remember_me_cookie_name'));

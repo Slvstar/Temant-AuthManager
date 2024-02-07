@@ -4,6 +4,7 @@ namespace Temant\AuthManager\Repository {
     use DateTime;
     use Doctrine\ORM\EntityRepository;
     use Temant\AuthManager\Entity\Token;
+    use Temant\AuthManager\Entity\User;
 
     class TokenRepository extends EntityRepository
     {
@@ -32,16 +33,15 @@ namespace Temant\AuthManager\Repository {
         /**
          * Finds tokens for a specific user and type.
          *
-         * @param string $userId The ID of the user.
+         * @param User $user The ID of the user.
          * @param string $type The type of tokens to find.
-         * @return Token[] An array of Token entities for the given user and type.
+         * @return Token[] An array of Token entities for the given user.
          */
-        public function findByUserAndType(string $userId, string $type): array
+        public function findByUserAndType(User $user, string $type): array
         {
-            return $this->findBy([
-                'userId' => $userId,
-                'type' => $type
-            ]);
+            return $user->getTokens()
+                ->filter(fn($token): bool => $token->getType() === $type)
+                ->toArray();
         }
 
         /**
