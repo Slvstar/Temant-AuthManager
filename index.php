@@ -70,13 +70,13 @@ try {
     // $auth->changePassword('Emad.A', 'Slvstar123@');
     // ($auth->registerUser('Emad', 'Almahdi', 'emad@alddmahfffdi.se', 'Slvstar123@'));
 
-    var_dump($auth->authenticate('Emad.A', 'Slvstar123@', true));
+    // var_dump($auth->authenticate('Emad.A', 'Slvstar123@', true));
 
-    //$session->destroy();
+    // $session->destroy();
     var_dump($auth->isAuthenticated());
     // var_dump($auth->isActivated('Emad.A'));
     // var_dump($auth->isAuthenticated());
-    var_dump($auth->deauthenticate());
+    // var_dump($auth->deauthenticate());
     // var_dump($auth->isAuthenticated());
 
 } catch (\Throwable $th) {

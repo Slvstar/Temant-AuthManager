@@ -188,7 +188,7 @@ namespace Temant\AuthManager {
                 $user = $this->findUserByToken($token);
                 if ($user) {
                     $this->session->regenerate();
-                    $this->deleteAuthenticationAttempts($user->getUserName());
+                    $this->deleteAuthenticationAttempts($user);
                     $this->logAuthenticationAttempt($user, true);
                     $this->session->set('user_id', $user->getUserName());
                     return true;
@@ -205,7 +205,7 @@ namespace Temant\AuthManager {
          * If a matching user is found, their data is returned as an array. If no user is found, null is returned.
          *
          * @param string $token The remember-me token associated with a user.
-         * @return mixed[]|null An array of user data if a user is found, or null if no user is found.
+         * @return User|null An array of user data if a user is found, or null if no user is found.
          */
         private function findUserByToken(string $token): User
         {
