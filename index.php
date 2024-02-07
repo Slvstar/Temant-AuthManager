@@ -4,6 +4,8 @@ use Doctrine\ORM\EntityManager;
 use Doctrine\ORM\ORMSetup;
 use Temant\AuthManager\AuthManager;
 use Temant\AuthManager\Config\ConfigManager;
+use Temant\AuthManager\Entity\Token;
+use Temant\AuthManager\Entity\User;
 use Temant\AuthManager\Storage\DatabaseStorage;
 use Temant\AuthManager\TokenManager;
 use Temant\DatabaseManager\DatabaseManager;
@@ -26,6 +28,20 @@ $connection = DriverManager::getConnection([
 
 // obtaining the entity manager
 $entityManager = new EntityManager($connection, $config);
+
+
+$user = $entityManager->getRepository(User::class)->findOneBy(['userId' => "Emad.A"]);
+
+$user->addToken((new Token())
+    ->setUser($user)
+    ->setType('remember_me')
+    ->setSelector(bin2hex(random_bytes(16)))
+    ->setValidator(bin2hex(random_bytes(32)))
+    ->setExpiresAt((new DateTime())->add(new DateInterval('P' . 1 . 'D'))));
+$entityManager->persist($user);
+$entityManager->flush();
+
+dd($user->getTokens()->toArray());
 
 
 // $tokenManager = new TokenManager($entityManager);

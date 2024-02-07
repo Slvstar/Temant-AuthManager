@@ -7,6 +7,8 @@ namespace Temant\AuthManager\Entity {
     use Doctrine\ORM\Mapping\Entity;
     use Doctrine\ORM\Mapping\GeneratedValue;
     use Doctrine\ORM\Mapping\Id;
+    use Doctrine\ORM\Mapping\JoinColumn;
+    use Doctrine\ORM\Mapping\ManyToOne;
     use Doctrine\ORM\Mapping\Table;
     use Temant\AuthManager\Repository\TokenRepository;
 
@@ -19,8 +21,9 @@ namespace Temant\AuthManager\Entity {
         #[Column(type: "integer")]
         private int $id;
 
-        #[Column(name: "user_id", type: "string", length: 255)]
-        private string $userId;
+        #[ManyToOne(targetEntity: User::class, inversedBy: 'tokens')]
+        #[JoinColumn(name: "user_id", referencedColumnName: "user_id")]
+        private User $user;
 
         #[Column(type: "string", length: 32)]
         private string $selector;
@@ -45,17 +48,6 @@ namespace Temant\AuthManager\Entity {
         public function getId(): int
         {
             return $this->id;
-        }
-
-        public function getUserId(): string
-        {
-            return $this->userId;
-        }
-
-        public function setUserId(string $userId): self
-        {
-            $this->userId = $userId;
-            return $this;
         }
 
         public function getSelector(): string
@@ -110,6 +102,21 @@ namespace Temant\AuthManager\Entity {
         public function setCreatedAt(DateTime $createdAt): self
         {
             $this->createdAt = $createdAt;
+            return $this;
+        }
+
+        /**
+         * @return User
+         */
+        public function getUser(): User
+        {
+            return $this->user;
+        }
+
+        public function setUser(User $user): self
+        {
+            $this->user = $user;
+            $user->addToken($this);
             return $this;
         }
     }
