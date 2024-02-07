@@ -16,7 +16,7 @@ class UserGroupManager
 
     public function byUserId(string $userId): ?self
     {
-        $groupData = $this->storage->getRow('auth_role', [
+        $groupData = $this->storage->getRow('authentication_role', [
             'id' => $this->storage->getColumn('auth_user_role', 'role_id', ['user_id' => $userId])
         ]);
         // If no user data is found, return null.
