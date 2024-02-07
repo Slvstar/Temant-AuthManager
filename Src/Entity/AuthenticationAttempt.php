@@ -19,7 +19,7 @@ namespace Temant\AuthManager\Entity {
         private ?int $id = null;
 
         #[Column(name: "user_id")]
-        private string $userId;
+        private int $userId;
 
         #[Column]
         private bool $success;
@@ -33,12 +33,12 @@ namespace Temant\AuthManager\Entity {
         #[Column(name: "user_agent")]
         private ?string $userAgent = null;
 
-        #[Column(type: "datetime")]
-        private DateTimeInterface $timestamp;
+        #[Column(name: "created_at", type: "datetime")]
+        private DateTimeInterface $createdAt;
 
         public function __construct()
         {
-            $this->timestamp = new DateTime();
+            $this->createdAt = new DateTime();
         }
 
         public function getId(): ?int
@@ -46,12 +46,12 @@ namespace Temant\AuthManager\Entity {
             return $this->id;
         }
 
-        public function getUserId(): string
+        public function getUserId(): int
         {
             return $this->userId;
         }
 
-        public function setUserId(string $userId): self
+        public function setUserId(int $userId): self
         {
             $this->userId = $userId;
             return $this;
@@ -101,14 +101,14 @@ namespace Temant\AuthManager\Entity {
             return $this;
         }
 
-        public function getTimestamp(): DateTimeInterface
+        public function getCreatedAt(): DateTimeInterface
         {
-            return $this->timestamp;
+            return $this->createdAt;
         }
 
-        public function setTimestamp(DateTimeInterface $timestamp): self
+        public function setCreatedAt(DateTimeInterface $createdAt): self
         {
-            $this->timestamp = $timestamp;
+            $this->createdAt = $createdAt;
             return $this;
         }
     }

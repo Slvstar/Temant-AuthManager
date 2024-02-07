@@ -11,7 +11,6 @@ namespace Temant\AuthManager\Entity {
     use Doctrine\ORM\Mapping\GeneratedValue;
     use Doctrine\ORM\Mapping\Id;
     use Doctrine\ORM\Mapping\OneToMany;
-    use Doctrine\ORM\Mapping\OneToOne;
     use Doctrine\ORM\Mapping\Table;
 
     #[Entity]
@@ -19,8 +18,12 @@ namespace Temant\AuthManager\Entity {
     class User
     {
         #[Id]
-        #[Column(name: 'user_id')]
-        private string $userId;
+        #[GeneratedValue]
+        #[Column(name: 'id')]
+        private int $id;
+
+        #[Column(name: 'username')]
+        private string $username;
 
         #[Column(name: 'first_name')]
         private string $firstName;
@@ -52,14 +55,19 @@ namespace Temant\AuthManager\Entity {
             $this->tokens = new ArrayCollection;
         }
 
-        public function getUserId(): string
+        public function getId(): int
         {
-            return $this->userId;
+            return $this->id;
         }
 
-        public function setUserId(string $userId): self
+        public function getUserName(): string
         {
-            $this->userId = $userId;
+            return $this->username;
+        }
+
+        public function setUserName(string $username): self
+        {
+            $this->username = $username;
             return $this;
         }
 

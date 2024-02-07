@@ -27,11 +27,11 @@ $connection = DriverManager::getConnection([
 // obtaining the entity manager
 $entityManager = new EntityManager($connection, $config);
 
+try {
 
-$user = $entityManager->getRepository(User::class)->findOneBy(['userId' => 'Emad.A']);
+    $user = $entityManager->getRepository(User::class)->findOneBy(['username' => 'Emad.A']);
 
-
-// $user->addToken((new Token())
+    // $user->addToken((new Token())
 //     ->setUser($user)
 //     ->setType('remember_me')
 //     ->setSelector(bin2hex(random_bytes(16)))
@@ -40,39 +40,45 @@ $user = $entityManager->getRepository(User::class)->findOneBy(['userId' => 'Emad
 // $entityManager->persist($user);
 // $entityManager->flush();
 
-// dd($user->getTokens()->toArray());
+    // dd($user->getTokens()->toArray());
 
-$user = $entityManager->getRepository(User::class)->findOneBy(['userId' => 'Emad.A']);
+    $user = $entityManager->getRepository(User::class)->findOneBy(['username' => 'Emad.A']);
 
-$tokenManager = new TokenManager($entityManager);
+    $tokenManager = new TokenManager($entityManager);
 
 
-//dd($tokenManager->saveToken($user, 'Test', 'Test', 'Test'));
+    //dd($tokenManager->saveToken($user, 'Test', 'Test', 'Test'));
 //dd($tokenManager->cleanupExpiredTokens());
 
 
 
-$session = new SessionManager;
 
-$session->start([]);
+    $session = new SessionManager;
 
-$db = new DatabaseManager(new mysqli('localhost', 'intradb', 'Proto!728agt22Ws', 'authentication'));
+    $session->start([]);
 
-$auth = new AuthManager($entityManager, new SessionManager, new ConfigManager($entityManager), new TokenManager($entityManager));
+    $db = new DatabaseManager(new mysqli('localhost', 'intradb', 'Proto!728agt22Ws', 'authentication'));
 
-// dd($auth->getUserObject());
+    $auth = new AuthManager($entityManager, new SessionManager, new ConfigManager($entityManager), new TokenManager($entityManager));
 
-($auth->listAuthenticationAttempts('Emad.A'));
+    // dd($auth->getUserObject());
 
-$auth->countFailedAuthenticationAttempts('Emad.A', 111111);
+    ($auth->listAuthenticationAttempts('Emad.A'));
 
-// $auth->changePassword('Emad.A', 'Slvstar123@');
-// ($auth->registerUser('Emad', 'Almahdi', 'emad@alddmahfffdi.se', 'Slvstar123@'));
-($auth->authenticate('Emad.A', 'Slvstar123@', true));
+    $auth->countFailedAuthenticationAttempts('Emad.A', 111111);
 
-//$session->destroy();
-var_dump($auth->isAuthenticated());
-// var_dump($auth->isActivated('Emad.A'));
+    // $auth->changePassword('Emad.A', 'Slvstar123@');
+    // ($auth->registerUser('Emad', 'Almahdi', 'emad@alddmahfffdi.se', 'Slvstar123@'));
+
+    dump($auth->authenticate('Emad.A', 'Slvstar123@', true));
+
+    //$session->destroy();
+    dump($auth->isAuthenticated());
+    // var_dump($auth->isActivated('Emad.A'));
 // var_dump($auth->isAuthenticated());
-var_dump($auth->deauthenticate());
-// var_dump($auth->isAuthenticated());
+    dump($auth->deauthenticate());
+    // var_dump($auth->isAuthenticated());
+
+} catch (\Throwable $th) {
+    echo ($th);
+}

@@ -21,7 +21,7 @@ namespace Temant\AuthManager\Entity {
         private int $id;
 
         #[ManyToOne(targetEntity: User::class, inversedBy: 'tokens')]
-        #[JoinColumn(name: "user_id", referencedColumnName: "user_id")]
+        #[JoinColumn(name: "user_id", referencedColumnName: "id")]
         private User $user;
 
         #[Column(type: "string", length: 32)]

@@ -60,7 +60,6 @@ namespace Temant\AuthManager {
         public function removeTokensForUserByType(User $user, string $type)
         {
             $tokens = $this->findByUserAndType($user, $type);
-
             foreach ($tokens as $token) {
                 $this->entityManager->remove($token);
                 $this->entityManager->flush();
