@@ -6,7 +6,6 @@ namespace Temant\AuthManager {
     use Temant\AuthManager\Entity\AuthenticationAttempt;
     use Temant\AuthManager\Entity\Token;
     use Temant\AuthManager\Entity\User;
-    use Temant\AuthManager\Storage\StorageInterface;
     use Temant\AuthManager\Utils\Utils;
     use Temant\CookieManager\CookieManager;
     use Temant\SessionManager\SessionManagerInterface;
@@ -17,14 +16,12 @@ namespace Temant\AuthManager {
 
         /**
          * @param SessionManagerInterface $session
-         * @param StorageInterface $storage
          * @param ConfigManagerInterface $configManager
          * @param TokenManager $tokenManager
          */
         public function __construct(
             private EntityManager $entityManager,
             private SessionManagerInterface $session,
-            private StorageInterface $storage,
             private ConfigManagerInterface $configManager,
             private TokenManager $tokenManager
         ) {

@@ -3,11 +3,8 @@ use Doctrine\DBAL\DriverManager;
 use Doctrine\ORM\EntityManager;
 use Doctrine\ORM\ORMSetup;
 use Temant\AuthManager\AuthManager;
-use Temant\AuthManager\Config\ConfigManager;
-use Temant\AuthManager\Entity\Token;
-use Temant\AuthManager\Entity\User;
-use Temant\AuthManager\Entity\UserRole;
-use Temant\AuthManager\Storage\DatabaseStorage;
+use Temant\AuthManager\Config\ConfigManager; 
+use Temant\AuthManager\Entity\User; 
 use Temant\AuthManager\TokenManager;
 use Temant\DatabaseManager\DatabaseManager;
 use Temant\SessionManager\SessionManager;
@@ -61,7 +58,7 @@ $session->start([]);
 
 $db = new DatabaseManager(new mysqli('localhost', 'intradb', 'Proto!728agt22Ws', 'authentication'));
 
-$auth = new AuthManager($entityManager, new SessionManager, $storage = new DatabaseStorage($db), new ConfigManager($entityManager), new TokenManager($entityManager));
+$auth = new AuthManager($entityManager, new SessionManager, new ConfigManager($entityManager), new TokenManager($entityManager));
 
 // dd($auth->getUserObject());
 
@@ -71,7 +68,7 @@ $auth->countFailedAuthenticationAttempts('Emad.A', 111111);
 
 // $auth->changePassword('Emad.A', 'Slvstar123@');
 // ($auth->registerUser('Emad', 'Almahdi', 'emad@alddmahfffdi.se', 'Slvstar123@'));
- ($auth->authenticate('Emad.A', 'Slvstar123@', true));
+($auth->authenticate('Emad.A', 'Slvstar123@', true));
 
 //$session->destroy();
 var_dump($auth->isAuthenticated());
