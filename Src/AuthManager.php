@@ -4,8 +4,10 @@ namespace Temant\AuthManager {
     use DateTime;
     use DateTimeInterface;
     use Doctrine\ORM\EntityManager;
+    use Exception;
     use Temant\AuthManager\Config\ConfigManagerInterface;
     use Temant\AuthManager\Entity\AuthenticationAttempt;
+    use Temant\AuthManager\Entity\Role;
     use Temant\AuthManager\Entity\Token;
     use Temant\AuthManager\Entity\User;
     use Temant\AuthManager\Utils\Utils;
@@ -373,28 +375,46 @@ namespace Temant\AuthManager {
         }
 
         /**
-         * Generate an unique username based on the user name
-         * @param string $firstName
-         * @param string $lastName
-         * @return string
+         * Generates a unique username based on the provided first name and last initial.
+         * This method constructs a base username by concatenating the capitalized first name with
+         * the capitalized initial of the last name. It then checks for existing usernames that start
+         * with this base username. If such usernames exist, it appends a number to the base username
+         * to ensure uniqueness. The number appended is one more than the count of existing usernames
+         * with the same pattern.
+         *
+         * @param string $firstName The first name of the user.
+         * @param string $lastName The last name of the user.
+         * @return string The generated unique username.
+         *
+         * @author Emad Almahdi
+         * @version 3.0.0
+         * @since 2024-02-08 
+         * @example generateUserName('John', 'Doe') // Returns 'John.D1' if 'John.D' already exists.
+         *
+         * @internal Used internally for user registration, not intended for external use.
          */
         private function generateUserName(string $firstName, string $lastName): string
         {
-            $username = sprintf('%s.%s', ucfirst($firstName), ucfirst(substr($lastName, 0, 1)));
+            $usernameBase = sprintf('%s.%s', ucfirst($firstName), ucfirst(substr($lastName, 0, 1)));
 
-            $currentUsers = count($this->entityManager
-                ->getRepository(User::class)
-                ->createQueryBuilder('u')
-                ->select('u.username')
-                ->where('u.username LIKE :username')
-                ->setParameter('username', "$username%")
-                ->getQuery()
-                ->execute());
+            // Retrieve users with usernames starting with the base username
+            $existingUsernames = array_map(fn(User $user): string =>
+                $user->getUserName(), $this->entityManager->getRepository(User::class)->findAll());
 
-            if ($currentUsers > 0) {
-                return $username . ++$currentUsers;
+            // Filter usernames to find those that match the pattern
+            $matchingUsernames = array_filter($existingUsernames, fn($username): bool =>
+                str_starts_with($username, $usernameBase));
+
+            // Count matching usernames to determine the new username's suffix
+            $countMatchingUsernames = count($matchingUsernames);
+
+            // If there are matching usernames, append the count + 1 to the base username
+            if ($countMatchingUsernames > 0) {
+                return $usernameBase . ($countMatchingUsernames + 1);
             }
-            return $username;
+
+            // If there are no matching usernames, return the base username
+            return $usernameBase;
         }
 
         /**
@@ -421,15 +441,18 @@ namespace Temant\AuthManager {
          *
          * @param string $firstName The first name of the user.
          * @param string $lastName The last name of the user.
+         * @param int $role The role Id of the new created User
          * @param string $email The E-mail of the user.
          * @param string $password The password of the user.
          * @return bool Returns true if the user is successfully registered, false otherwise.
          *              for the provided data or an issue with inserting the new record into the database.
          */
-        function registerUser(string $firstName, string $lastName, string $email, string $password): bool
+        function registerUser(string $firstName, string $lastName, int $role, string $email, string $password): bool
         {
+            // Generate a username based on the provided first and last name
             $username = $this->generateUserName($firstName, $lastName);
 
+            // Create a new User entity and set its properties
             $newUser = (new User)
                 ->setUserName($username)
                 ->setFirstName($firstName)
@@ -438,16 +461,27 @@ namespace Temant\AuthManager {
                 ->setPassword($this->hashPassword($password))
                 ->setIsActivated(false)
                 ->setIsLocked(false);
+
+            // Retrieve the desired Role entity from the database
+            $role = $this->entityManager->getRepository(Role::class)->find($role);
+
+            if (!$role) {
+                throw new Exception("User Role Is Not Found!", 1);
+            }
+
+            // Set the Role on the new User entity
+            $newUser->setRole($role);
+
+            // Persist the new User entity to the database
             $this->entityManager->persist($newUser);
             $this->entityManager->flush();
 
-            $user = $this->entityManager->getRepository(User::class)->findOneBy(['username' => $username]);
-
+            // Additional logic for email verification, etc.
             if ($this->configManager->get('mail_verify') === 'enabled') {
                 [$selector, $validator] = $this->tokenManager->generateToken();
 
-                $this->tokenManager->saveToken($user, 'email_activation', $selector, $validator, (int) $this->configManager->get('mail_activation_token_lifetime'));
-                $this->verifyEmail($user, $selector, $validator);
+                $this->tokenManager->saveToken($newUser, 'email_activation', $selector, $validator, (int) $this->configManager->get('mail_activation_token_lifetime'));
+                $this->verifyEmail($newUser, $selector, $validator);
             }
 
             return true;

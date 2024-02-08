@@ -10,7 +10,10 @@ namespace Temant\AuthManager\Entity {
     use Doctrine\ORM\Mapping\Entity;
     use Doctrine\ORM\Mapping\GeneratedValue;
     use Doctrine\ORM\Mapping\Id;
+    use Doctrine\ORM\Mapping\JoinColumn;
+    use Doctrine\ORM\Mapping\ManyToOne;
     use Doctrine\ORM\Mapping\OneToMany;
+    use Doctrine\ORM\Mapping\OneToOne;
     use Doctrine\ORM\Mapping\Table;
 
     #[Entity]
@@ -45,6 +48,10 @@ namespace Temant\AuthManager\Entity {
 
         #[Column(name: 'created_at', type: "datetime")]
         private DateTimeInterface $createdAt;
+
+        #[ManyToOne(targetEntity: Role::class)]
+        #[JoinColumn(name: "role_id", referencedColumnName: "id")]
+        private ?Role $role = null;
 
         #[OneToMany(targetEntity: Token::class, mappedBy: "user", cascade: ["persist", "remove"])]
         private Collection $tokens;
@@ -187,6 +194,17 @@ namespace Temant\AuthManager\Entity {
         public function setAttempts(Collection $attempts): self
         {
             $this->attempts = $attempts;
+            return $this;
+        }
+
+        public function getRole(): ?Role
+        {
+            return $this->role;
+        }
+
+        public function setRole(?Role $role): self
+        {
+            $this->role = $role;
             return $this;
         }
     }

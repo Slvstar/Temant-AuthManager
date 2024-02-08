@@ -43,6 +43,7 @@ $user = $entityManager->getRepository(User::class)->findOneBy(['username' => 'Em
 
 $user = $entityManager->getRepository(User::class)->findOneBy(['username' => 'Emad.A']);
 
+
 $tokenManager = new TokenManager($entityManager);
 
 
@@ -66,14 +67,14 @@ $auth = new AuthManager($entityManager, new SessionManager, new ConfigManager($e
 // $auth->deactivateAccount($user);
 // // dd($auth->getUserObject());
 
-dd($auth->isAuthenticated());
+// dd($auth->isAuthenticated());
 
 // dump($auth->listAuthenticationAttempts($user));
 
 // dump($auth->countFailedAuthenticationAttempts($user));
 
 // dd($auth->changePassword($user, 'Slvstar123@'));
-//$auth->registerUser(bin2hex(random_bytes(4)), 'Almahdi', bin2hex(random_bytes(8)), 'Slvstar123@');
+$auth->registerUser('Emado', 'Almahdio', 2, 'emad.storm@gmail.como', 'Slvstar123@');
 
 // dd( $auth->authenticate('Emad.A', 'Slvstar123@', true),$auth->unlockAccount($user));
 
