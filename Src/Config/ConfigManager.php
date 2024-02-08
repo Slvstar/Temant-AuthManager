@@ -21,7 +21,7 @@ namespace Temant\AuthManager\Config {
 
         public function get(string $key): mixed
         {
-            return $this->config->findOneBy(['configKey' => $key])->getConfigValue();
+            return $this->config->findOneBy(['configKey' => $key])?->getConfigValue();
         }
 
         public function getBoolean(string $key): bool

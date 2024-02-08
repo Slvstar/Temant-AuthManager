@@ -51,6 +51,12 @@ namespace Temant\AuthManager {
             // Generate a username based on the provided first and last name
             $username = $this->generateUserName($firstName, $lastName);
 
+            // Password validation checks
+            if (!$this->validatePassword($password)) {
+                // Password does not meet requirements
+                throw new Exception("Password does not meet the requirements.", 1);
+            }
+
             // Create a new User entity and set its properties
             $newUser = (new User)
                 ->setUserName($username)
@@ -82,6 +88,54 @@ namespace Temant\AuthManager {
 
                 $this->tokenManager->saveToken($newUser, 'email_activation', $selector, $validator, (int) $this->configManager->get('mail_activation_token_lifetime'));
                 $this->verifyEmail($newUser, $selector, $validator);
+            }
+
+            return true;
+        }
+
+        /**
+         * Validates a password against the configured password requirements.
+         *
+         * @param string $password The password to validate.
+         * @return bool Returns true if the password meets the requirements, false otherwise.
+         */
+        function validatePassword(string $password): bool
+        {
+            $config = $this->configManager;
+
+            // Check minimum length requirem
+            if (!is_null($this->configManager->get('password_min_length'))) {
+                if (strlen($password) < $this->configManager->getInteger('password_min_length')) {
+                    return false;
+                }
+            }
+
+            // Check if uppercase letter is required
+            if (!is_null($this->configManager->get('password_min_length'))) {
+                if ($this->configManager->getBoolean('password_require_uppercase') && !preg_match('/[A-Z]/', $password)) {
+                    return false;
+                }
+            }
+
+            // Check if lowercase letter is required
+            if (!is_null($this->configManager->get('password_min_length'))) {
+                if ($this->configManager->getBoolean('password_require_lowercase') && !preg_match('/[a-z]/', $password)) {
+                    return false;
+                }
+            }
+
+            // Check if numeric digit is required
+            if (!is_null($this->configManager->get('password_min_length'))) {
+                if ($this->configManager->getBoolean('password_require_numeric') && !preg_match('/\d/', $password)) {
+                    return false;
+                }
+            }
+
+            // Check if special character is required
+            if (!is_null($this->configManager->get('password_min_length'))) {
+                if ($this->configManager->getBoolean('password_require_special') && !preg_match('/[^a-zA-Z\d]/', $password)) {
+                    return false;
+                }
             }
 
             return true;
@@ -188,7 +242,7 @@ namespace Temant\AuthManager {
             $cookieExpiry = time() + 60 * 60 * 24 * $tokenLifetimeDays;
 
             // Persist the new token associated with the user in the database
-            $this->tokenManager->saveToken($user, 'remember_me', $selector, $validator, $cookieExpiry);
+            $this->tokenManager->saveToken($user, 'remember_me', $selector, $validator, $tokenLifetimeDays);
 
             // Set the 'remember_me' cookie in the user's browser with the generated token
             CookieManager::set($cookieName, $token, $cookieExpiry);
