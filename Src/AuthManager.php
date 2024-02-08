@@ -14,7 +14,7 @@ namespace Temant\AuthManager {
     use Temant\CookieManager\CookieManager;
     use Temant\SessionManager\SessionManagerInterface;
 
-    class AuthManager // implements AuthManagerInterface
+    class AuthManager implements AuthManagerInterface
     {
         private const TBL_AUTH_USER = 'authentication_users';
 
