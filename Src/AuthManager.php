@@ -305,10 +305,16 @@ namespace Temant\AuthManager {
         }
 
         /**
-         * Activates a user's account, typically used after account creation or reactivation
-         * to allow the user to login and access the system.
+         * Activates a user's account to enable login and system access.
+         * This method is typically invoked post-account creation or during account reactivation processes.
          *
-         * @param User $user The unique identifier of the user whose account is to be activated. 
+         * @param User $user The user entity whose account is to be activated.
+         *
+         * @author Emad Almahdi
+         * @version 3.0.0
+         * @since 2024-02-08
+         * @see User::setIsActivated() Related method to set the activation status.
+         * @uses EntityManager::flush() To persist changes to the database.
          */
         public function activateAccount(User $user): void
         {
@@ -317,10 +323,16 @@ namespace Temant\AuthManager {
         }
 
         /**
-         * Deactivates a user's account, effectively preventing them from logging in and accessing the system.
-         * This can be used for administrative purposes or at the user's request for account deactivation.
+         * Deactivates a user's account, preventing login and access to the system.
+         * This method can be utilized for administrative purposes or upon a user's request for account deactivation.
          *
-         * @param User $user The unique identifier of the user whose account is to be deactivated.
+         * @param User $user The user entity whose account is to be deactivated.
+         *
+         * @author Emad Almahdi
+         * @version 3.0.0
+         * @since 2024-02-08
+         * @see User::setIsActivated() Related method to set the activation status.
+         * @uses EntityManager::flush() To persist changes to the database.
          */
         public function deactivateAccount(User $user): void
         {
@@ -329,10 +341,15 @@ namespace Temant\AuthManager {
         }
 
         /**
-         * Checks whether a user's account is currently activated.
+         * Determines if a user's account is currently activated, allowing or disallowing system access.
          *
-         * @param User $user The unique identifier of the user whose account activation status is to be checked.
-         * @return bool Returns true if the account is currently activated, allowing login and access to the system, or false if the account is deactivated.
+         * @param User $user The user entity to check for activation status.
+         * @return bool True if the account is activated, false otherwise.
+         *
+         * @author Emad Almahdi
+         * @version 3.0.0
+         * @since 2024-02-08
+         * @see User::getIsActivated() Used to retrieve the user's activation status.
          */
         public function isActivated(User $user): bool
         {
@@ -340,10 +357,15 @@ namespace Temant\AuthManager {
         }
 
         /**
-         * Checks whether a user's account is currently locked.
+         * Assesses if a user's account is currently locked, impacting their ability to log in.
          *
-         * @param User $user The unique identifier of the user whose account lock status is to be checked.
-         * @return bool Returns true if the account is currently locked, false otherwise.
+         * @param User $user The user entity to check for lock status.
+         * @return bool True if the account is locked, false otherwise.
+         *
+         * @author Emad Almahdi
+         * @version 3.0.0
+         * @since 2024-02-08
+         * @see User::getIsLocked() Used to retrieve the user's lock status.
          */
         public function isLocked(User $user): bool
         {
@@ -351,10 +373,16 @@ namespace Temant\AuthManager {
         }
 
         /**
-         * Temporarily locks a user's account for a specified duration.
-         * This can be used as a security measure after a certain number of failed login attempts or for administrative reasons.
+         * Imposes a temporary lock on a user's account, which can serve as a security measure
+         * following multiple failed login attempts or for administrative purposes.
          *
-         * @param User $user The unique identifier of the user whose account is to be locked.
+         * @param User $user The user entity whose account is to be locked.
+         *
+         * @author Emad Almahdi
+         * @version 3.0.0
+         * @since 2024-02-08
+         * @see User::setIsLocked() Related method to set the lock status.
+         * @uses EntityManager::flush() To persist changes to the database.
          */
         public function lockAccount(User $user): void
         {
@@ -363,10 +391,16 @@ namespace Temant\AuthManager {
         }
 
         /**
-         * Unlocks a user's account, allowing them to login again.
-         * This method can be used to restore access for a user whose account was previously locked.
+         * Removes the lock from a user's account, reinstating their login capabilities.
+         * This is generally used to restore access for users whose accounts were previously locked.
          *
-         * @param User $user The unique identifier of the user whose account is to be unlocked.
+         * @param User $user The user entity whose account is to be unlocked.
+         *
+         * @author Emad Almahdi
+         * @version 3.0.0
+         * @since 2024-02-08
+         * @see User::setIsLocked() Related method to set the lock status.
+         * @uses EntityManager::flush() To persist changes to the database.
          */
         public function unlockAccount(User $user): void
         {
