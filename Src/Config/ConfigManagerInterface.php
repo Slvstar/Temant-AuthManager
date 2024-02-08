@@ -21,6 +21,20 @@ namespace Temant\AuthManager\Config {
         public function get(string $key): mixed;
 
         /**
+         * Get a boolean configuration value by key.
+         *
+         * @param string $key The key of the configuration value. 
+         */
+        public function getBoolean(string $key): bool;
+
+        /**
+         * Get an integer configuration value by key.
+         *
+         * @param string $key The key of the configuration value. 
+         */
+        public function getInteger(string $key): int;
+
+        /**
          * Set a configuration value.
          *
          * @param string $key   The key for the configuration value.

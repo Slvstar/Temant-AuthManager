@@ -542,7 +542,7 @@ namespace Temant\AuthManager {
          */
         private function generateUserName(string $firstName, string $lastName): string
         {
-            dd($this->configManager->getAsbool('allow_username_increment'));
+            dd($this->configManager->getBoolean('allow_username_increment'));
             $usernameBase = sprintf('%s.%s', ucfirst($firstName), ucfirst(substr($lastName, 0, 1)));
 
             // Retrieve users with usernames starting with the base username

@@ -30,7 +30,7 @@ namespace Temant\AuthManager\Config {
             return filter_var($value, FILTER_VALIDATE_BOOLEAN);
         }
 
-        public function getInteger(string $key): bool
+        public function getInteger(string $key): int
         {
             $value = $this->get($key);
             return filter_var($value, FILTER_VALIDATE_INT);
