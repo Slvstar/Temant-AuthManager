@@ -3,7 +3,6 @@
 namespace Temant\AuthManager {
     use DateTime;
     use DateTimeInterface;
-    use Doctrine\Common\Collections\ArrayCollection;
     use Doctrine\ORM\EntityManager;
     use Temant\AuthManager\Config\ConfigManagerInterface;
     use Temant\AuthManager\Entity\AuthenticationAttempt;
@@ -64,7 +63,7 @@ namespace Temant\AuthManager {
             $this->session->regenerate();
             $this->deleteAuthenticationAttempts($user); // Assumes functionality to delete previous failed login attempts, if any
             $this->logAuthenticationAttempt($user, true); // Log successful login attempt
-            $this->session->set('user_id', $username); // Set user session
+            $this->session->set('user', $user); // Set user session
 
             // Handle "remember me" functionality, if requested
             if ($remember) {
@@ -186,7 +185,7 @@ namespace Temant\AuthManager {
          */
         public function isAuthenticated(): bool
         {
-            if ($this->session->has('user_id')) {
+            if ($this->session->has('user')) {
                 return true;
             }
 
@@ -197,7 +196,7 @@ namespace Temant\AuthManager {
                     $this->session->regenerate();
                     $this->deleteAuthenticationAttempts($user);
                     $this->logAuthenticationAttempt($user, true);
-                    $this->session->set('user_id', $user->getUserName());
+                    $this->session->set('user', $user);
                     return true;
                 }
             }
@@ -379,7 +378,7 @@ namespace Temant\AuthManager {
          * @param string $lastName
          * @return string
          */
-        private function generateUserId(string $firstName, string $lastName): string
+        private function generateUserName(string $firstName, string $lastName): string
         {
             $username = sprintf('%s.%s', ucfirst($firstName), ucfirst(substr($lastName, 0, 1)));
 
@@ -410,7 +409,7 @@ namespace Temant\AuthManager {
             if ($this->isAuthenticated()) {
                 return $this->entityManager
                     ->getRepository(User::class)
-                    ->findOneBy(['username' => $this->session->get('user_id')]);
+                    ->find($this->session->get('user'));
             }
             return null;
         }
@@ -429,8 +428,7 @@ namespace Temant\AuthManager {
          */
         function registerUser(string $firstName, string $lastName, string $email, string $password): bool
         {
-            $username = $this->generateUserId($firstName, $lastName);
-
+            $username = $this->generateUserName($firstName, $lastName);
 
             $newUser = (new User)
                 ->setUserName($username)
@@ -443,21 +441,22 @@ namespace Temant\AuthManager {
             $this->entityManager->persist($newUser);
             $this->entityManager->flush();
 
-            $userObject = $this->entityManager->getRepository(User::class)->findOneBy(['username' => $username]);
+            $user = $this->entityManager->getRepository(User::class)->findOneBy(['username' => $username]);
 
             if ($this->configManager->get('mail_verify') === 'enabled') {
                 [$selector, $validator] = $this->tokenManager->generateToken();
 
-                $this->tokenManager->saveToken($userObject, 'email_activation', $selector, $validator, (int) $this->configManager->get('mail_activation_token_lifetime'));
-                $this->verifyEmail($username, $selector, $validator);
+                $this->tokenManager->saveToken($user, 'email_activation', $selector, $validator, (int) $this->configManager->get('mail_activation_token_lifetime'));
+                $this->verifyEmail($user, $selector, $validator);
             }
 
             return true;
         }
 
-        public function verifyEmail(string $userId, string $selector, string $validator): bool
+        public function verifyEmail(User $user, string $selector, string $validator): bool
         {
-            $email = $this->entityManager->getRepository(User::class)->findOneBy(['userId' => $userId])->getEmail();
+            $email = $this->entityManager->getRepository(User::class)->find($user)->getEmail();
+
             // set email subject & body
             $subject = 'Please activate your account';
             $message = <<<MESSAGE
