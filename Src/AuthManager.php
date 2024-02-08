@@ -295,12 +295,23 @@ namespace Temant\AuthManager {
                 ->getUser();
         }
 
+
+
+
+
+
+        
         /**
-         * Lists all authentication attempts for a specific user. This method can be used for auditing purposes,
-         * to analyze user login patterns, or to detect potential security breaches by reviewing suspicious login attempts.
+         * Retrieves all authentication attempts made by a specific user. Useful for audit trails, analyzing login patterns,
+         * and detecting potential security threats through the examination of failed login attempts. Each attempt includes
+         * detailed information such as the timestamp, outcome (success or failure), and originating IP address.
          *
-         * @param User $user The unique identifier of the user whose authentication attempts are to be listed.
-         * @return AuthenticationAttempt[] An array of authentication attempts, each containing details such as attempt timestamp, success/failure status, and IP address.
+         * @param User $user The user entity whose authentication attempts are being queried.
+         * @return AuthenticationAttempt[] An array of AuthenticationAttempt entities associated with the user, providing a historical log of authentication attempts.
+         *
+         * @author Emad Almahdi
+         * @version 3.0.0
+         * @since 2024-02-08
          */
         public function listAuthenticationAttempts(User $user): array
         {
@@ -308,15 +319,20 @@ namespace Temant\AuthManager {
         }
 
         /**
-         * Records an authentication attempt for a user, detailing the outcome, reason for failure (if applicable), IP address, and user agent. 
-         * This comprehensive logging is essential for security auditing, tracking login attempts, identifying patterns, and investigating potential breaches.
+         * Records a new authentication attempt for a specified user, capturing critical details such as the attempt's outcome,
+         * failure reason (if any), originating IP address, and user agent. This function is vital for maintaining a secure audit
+         * trail, monitoring authentication patterns, and facilitating investigations into security incidents.
          *
-         * @param User $user The unique identifier of the user attempting to authenticate
-         * @param bool $success Indicates the success or failure of the authentication attempt. True for a successful attempt, false for a failed one.
-         * @param string|null $reason Optional. Describes the reason for the authentication attempt's failure
-         * @param string|null $ipAddress Optional. The IP address from which the authentication attempt originated.
-         * @param string|null $userAgent Optional. Identifies the user agent (browser, mobile device, etc.) from which the login attempt was made.
-         * @return bool Returns true if the authentication attempt is successfully logged in the system's storage, false otherwise.
+         * @param User $user The user entity for whom the authentication attempt is being logged.
+         * @param bool $success Flag indicating the outcome of the attempt (true for success, false for failure).
+         * @param string|null $reason Optional description of why the attempt failed, applicable only for unsuccessful attempts.
+         * @param string|null $ipAddress Optional IP address from which the attempt was made, defaults to the current user's IP if not provided.
+         * @param string|null $userAgent Optional identifier for the user agent from which the attempt originated, defaults to the current request's user agent if not provided.
+         * @return bool Indicating if the attempt was logged successfully.
+         *
+         * @author Emad Almahdi
+         * @version 3.0.0
+         * @since 2024-02-08
          */
         public function logAuthenticationAttempt(User $user, bool $success, ?string $reason = null, ?string $ipAddress = null, ?string $userAgent = null): bool
         {
@@ -330,31 +346,8 @@ namespace Temant\AuthManager {
             $this->entityManager->persist($attempt);
             $this->entityManager->flush();
 
-            return true;
+            return $this->entityManager->getRepository(AuthenticationAttempt::class)->find($attempt) !== null;
         }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
         /**
          * Activates a user's account to enable login and system access.
