@@ -31,7 +31,6 @@ namespace Temant\AuthManager {
         ) {
         }
 
-
         /**
          * Registers a new user in the system with the provided user data.
          * This method is typically called during the sign-up process
@@ -39,11 +38,13 @@ namespace Temant\AuthManager {
          *
          * @param string $firstName The first name of the user.
          * @param string $lastName The last name of the user.
-         * @param int $role The role Id of the new created User
-         * @param string $email The E-mail of the user.
+         * @param int $role The role ID of the new user.
+         * @param string $email The email address of the user.
          * @param string $password The password of the user.
          * @return bool Returns true if the user is successfully registered, false otherwise.
          *              for the provided data or an issue with inserting the new record into the database.
+         *
+         * @throws Exception When the specified user role is not found in the database.
          */
         function registerUser(string $firstName, string $lastName, int $role, string $email, string $password): bool
         {
@@ -61,14 +62,15 @@ namespace Temant\AuthManager {
                 ->setIsLocked(false);
 
             // Retrieve the desired Role entity from the database
-            $role = $this->entityManager->getRepository(Role::class)->find($role);
+            $roleEntity = $this->entityManager->getRepository(Role::class)->find($role);
 
-            if (!$role) {
+            // Throw an exception if the specified user role is not found
+            if (!$roleEntity) {
                 throw new Exception("User Role Is Not Found!", 1);
             }
 
             // Set the Role on the new User entity
-            $newUser->setRole($role);
+            $newUser->setRole($roleEntity);
 
             // Persist the new User entity to the database
             $this->entityManager->persist($newUser);
@@ -85,33 +87,50 @@ namespace Temant\AuthManager {
             return true;
         }
 
+        /**
+         * Sends an email to the user for email verification.
+         * This method typically sends an activation link to the user's email address
+         * containing the necessary parameters for account activation.
+         *
+         * @param User $user The user object whose email address is to be verified.
+         * @param string $selector The token selector for email verification.
+         * @param string $validator The token validator for email verification.
+         * @return bool Returns true if the email is successfully sent, false otherwise.
+         */
         public function verifyEmail(User $user, string $selector, string $validator): bool
         {
-            $email = $this->entityManager->getRepository(User::class)->find($user)->getEmail();
+            // Retrieve the user's email address
+            $email = $user->getEmail();
 
-            // set email subject & body
+            // Set email subject and body
             $subject = 'Please activate your account';
             $message = <<<MESSAGE
                 Hi,
-                Please click the following link to activate your account:
-                "https://authy/activate.php?email=$email&selector=$selector&validator=$validator"
-                MESSAGE;
-            // send the email
 
+                Please click the following link to activate your account:
+                https://authy/activate.php?email=$email&selector=$selector&validator=$validator
+                MESSAGE;
+
+            // Send the email
             return mail($email, $subject, nl2br($message), "From:no-reply@email.com");
         }
 
         /**
          * Authenticates a user by verifying their provided credentials against stored records.
-         * This method is typically called during the login process.
+         * This method is typically called during the login process to validate user login attempts.
          *
-         * @param string $username The unique identifier for the user,
-         * @param string $password The password provided by the user for authentication.
-         * @param bool $remember Optional. If true, the user's session will be remembered across browser sessions.
-         * @return bool Returns true if the credentials are valid and the user is successfully authenticated, false otherwise.
+         * @param string $username The unique identifier for the user, such as username or email address.
+         * @param string $password The plaintext password provided by the user for authentication.
+         * @param bool $remember Optional. If set to true, the user's session will be remembered across browser sessions.
+         * @return bool Returns true if the provided credentials are valid and the user is successfully authenticated, false otherwise.
+         *
+         * @author Emad Almahdi
+         * @version 3.0.0
+         * @since 2024-02-08
          */
         public function authenticate(string $username, string $password, bool $remember = false): bool
         {
+            // Retrieve the user entity based on the provided username
             $user = $this->entityManager->getRepository(User::class)->findOneBy(['username' => $username]);
 
             // Check if user exists
@@ -119,188 +138,247 @@ namespace Temant\AuthManager {
                 return false;
             }
 
-            // Check if user is activated
+            // Check if user account is activated
             if (!$this->isActivated($user)) {
                 $this->logAuthenticationAttempt($user, false, 'User not activated');
                 return false;
             }
 
-            // Check if password is correct
+            // Check if the provided password is correct
             if (!$this->verifyPassword($user, $password)) {
                 $this->logAuthenticationAttempt($user, false, 'Wrong password');
                 return false;
             }
 
-            // At this point, all checks have passed
-            $this->session->regenerate();
-            $this->deleteAuthenticationAttempts($user); // Assumes functionality to delete previous failed login attempts, if any
-            $this->logAuthenticationAttempt($user, true); // Log successful login attempt
-            $this->session->set('user', $user); // Set user session
-
-            // Handle "remember me" functionality, if requested
-            if ($remember) {
-                $this->rememberUser($user);
-            }
+            // Finalize authentication process after all checks passed
+            $this->finalizeAuthentication($user, $remember);
 
             return true; // Login successful
         }
 
         /**
-         * Remembers a user by generating a new remember-me token and storing it.
+         * Implements the "remember me" functionality by generating a new persistent login token for a user,
+         * securely storing it, and setting a corresponding cookie in the user's browser. This facilitates
+         * automatic user authentication on future visits without requiring manual login, enhancing user convenience
+         * while maintaining security through token validation.
          *
-         * This function generates a new remember-me token for the given user ID, removes any existing remember-me tokens
-         * for that user, and stores the new token. It also sets a corresponding cookie in the user's browser to facilitate
-         * automatic login on subsequent visits.
+         * The method handles token generation, existing token cleanup for the user, secure token storage, and
+         * cookie setup with appropriate attributes, including the token's expiration.
          *
-         * @param User $user The unique identifier of the user to remember.
+         * @param User $user The user entity for whom the "remember me" token is being generated and remembered.
          * @return void
+         * 
+         * @author Emad Almahdi
+         * @version 3.0.0
+         * @since 2024-02-08
          */
         private function rememberUser(User $user): void
         {
-            // Generate a new token using the TokenManager.
+            // Remove any existing 'remember_me' tokens for the user to prevent token buildup
+            $this->tokenManager->removeTokensForUserByType($user, 'remember_me');
+
+            // Generate a new 'remember_me' token
             [$selector, $validator, $token] = $this->tokenManager->generateToken();
 
-            // Remove all existing tokens associated with the user ID for 'remember_me'.
-            $this->tokenManager
-                ->removeTokensForUserByType($user, 'remember_me');
+            // Retrieve configuration for 'remember_me' token lifetime and cookie name
+            $tokenLifetimeDays = (int) $this->configManager->get('remember_me_token_lifetime');
+            $cookieName = $this->configManager->get('remember_me_cookie_name');
 
-            // Get the remember me token lifetime and name from the configuration
-            $lifeTime = (int) $this->configManager->get('remember_me_token_lifetime');
-            $tokenName = $this->configManager->get('remember_me_cookie_name');
+            // Calculate the cookie's expiration time based on the token's lifetime
+            $cookieExpiry = time() + 60 * 60 * 24 * $tokenLifetimeDays;
 
-            // Save the new token in the database with the user ID, selector, validator, and its lifetime
-            $this->tokenManager->saveToken($user, $tokenName, $selector, $validator, $lifeTime);
+            // Persist the new token associated with the user in the database
+            $this->tokenManager->saveToken($user, 'remember_me', $selector, $validator, $cookieExpiry);
 
-            // Set a cookie in the user's browser with the token, using the cookie name from configuration
-            // The cookie's expiration is set based on the token's lifetime
-            CookieManager::set($tokenName, $token, time() + 60 * 60 * 24 * $lifeTime);
+            // Set the 'remember_me' cookie in the user's browser with the generated token
+            CookieManager::set($cookieName, $token, $cookieExpiry);
         }
 
         /**
-         * Counts the number of failed authentication attempts for a specific user within a given time frame.
-         * This can be used as part of security measures to implement account lockout policies after a certain number of failed attempts.
+         * Calculates the quantity of unsuccessful authentication attempts by a specific user within a defined time frame.
+         * This functionality is instrumental in enforcing security protocols such as account lockouts after numerous failed login attempts,
+         * enhancing the system's resilience against unauthorized access attempts.
          *
-         * @param User $user The unique identifier of the user.
-         * @param int $timePeriod The period of time in seconds during which to count the failed attempts.
-         * @return int The number of failed login attempts within the specified time period.
+         * @param User $user The user entity whose failed authentication attempts are being counted.
+         * @param DateTimeInterface|null $timePeriod The starting point in time from which to count failed attempts. Defaults to the current time if not provided.
+         * @return int The total count of failed authentication attempts by the user since the specified time.
+         *
+         * @author Emad Almahdi
+         * @version 3.0.0
+         * @since 2024-02-08
          */
-        public function countFailedAuthenticationAttempts(User $user, DateTimeInterface $timePeriod = new DateTime): int
+        public function countFailedAuthenticationAttempts(User $user, ?DateTimeInterface $timePeriod = null): int
         {
+            $timePeriod = $timePeriod ?? new DateTime();
+
             return $user->getAttempts()
-                ->filter(
-                    fn(AuthenticationAttempt $attempt): bool =>
-                    $attempt->getSuccess() === false
-                    && $attempt->getCreatedAt() >= $timePeriod
-                )
+                ->filter(fn(AuthenticationAttempt $attempt): bool =>
+                    !$attempt->getSuccess() && $attempt->getCreatedAt() >= $timePeriod)
                 ->count();
         }
 
         /**
-         * Deauthenticate a user by invalidating their current authentication session or token.
-         * This method is called during the logout process and ensures the user must re-authenticate in future sessions.
+         * Terminates the current user's session and invalidates any persistent login tokens, effectively logging the user out.
+         * This action is a critical part of the logout process, ensuring that subsequent requests require new authentication.
+         * The method handles the removal of "remember me" tokens and the deletion of session data, providing a secure and clean
+         * logout experience.
          *
-         * @return bool Returns true if the logout process is successful, false otherwise.
+         * @return bool True if the logout process completes successfully, including the removal of any persistent tokens and session destruction.
+         *              False if any part of the process fails, indicating a potential issue in the logout workflow.
+         *
+         * @author Emad Almahdi
+         * @version 3.0.0
+         * @since 2024-02-08
          */
         public function deauthenticate(): bool
         {
-            // delete the user token
-            if ($this->getLoggedInUser()) {
-                $this->tokenManager
-                    ->removeTokensForUserByType($this->getLoggedInUser(), 'remember_me');
+            $loggedInUser = $this->getLoggedInUser();
+            $rememberMeCookieName = $this->configManager->get('remember_me_cookie_name');
+
+            // Remove "remember me" tokens for the logged-in user, if any
+            if ($loggedInUser) {
+                $this->tokenManager->removeTokensForUserByType($loggedInUser, $rememberMeCookieName);
             }
 
-            // remove the remember_me cookie
-            CookieManager::delete($this->configManager->get('remember_me_cookie_name'));
+            // Delete the "remember me" cookie
+            CookieManager::delete($rememberMeCookieName);
 
-            // remove all session data
+            // Destroy the session to complete the logout process
             return $this->session->destroy();
         }
 
         /**
-         * Deletes all authentication attempts for a given user. This method can be particularly useful for clearing a user's authentication history,
-         * either as part of a privacy feature or when resetting account security settings. It ensures that no residual login attempt records remain for the user.
+         * Clears all recorded authentication attempts for a specified user. This function is instrumental in managing user data privacy
+         * and resetting account security settings. By removing all authentication attempt records, it ensures that the user's authentication
+         * history is entirely erased, providing a fresh start or aiding in security analysis.
          *
-         * @param User $user The unique identifier of the user whose authentication attempts are to be deleted. This could be their username, email address, or any other unique identifier used within the system.
-         * @return bool Returns true if all authentication attempts for the user are successfully deleted, false otherwise. A return value of true signifies a clean slate for the user's authentication history, while false indicates that an error occurred during the process.
+         * @param User $user The user entity whose authentication attempt records are to be purged from the system.
+         * @return bool True if all authentication attempt records for the specified user are successfully deleted, indicating a complete
+         *              reset of the user's authentication history. False if the deletion process encounters an error, which may require further investigation.
+         *
+         * @author Emad Almahdi
+         * @version 3.0.0
+         * @since 2024-02-08
          */
         public function deleteAuthenticationAttempts(User $user): bool
         {
-            return (bool) $this->entityManager
+            $deleteCount = $this->entityManager
                 ->getRepository(AuthenticationAttempt::class)
                 ->createQueryBuilder('a')
                 ->delete()
                 ->where('a.user = :user')
                 ->setParameter('user', $user)
                 ->getQuery()->execute();
+
+            return $deleteCount > 0;
         }
 
         /**
-         * Retrieves the status of the last authentication attempt for a specific user.
+         * Determines the outcome of the most recent authentication attempt made by a given user. This method is useful
+         * for understanding a user's last interaction with the authentication system, such as for displaying messages
+         * related to their last login attempt or for audit purposes.
          *
-         * @param User $user The unique identifier of the user.
-         * @return bool|null Returns true if the last attempt was successful, false if unsuccessful, or null if no record exists.
+         * @param User $user The user entity whose last authentication attempt is being queried.
+         * @return bool|null True if the last attempt was successful, false if it was unsuccessful, or null if there are no recorded attempts for the user.
+         *
+         * @author Emad Almahdi
+         * @version 3.0.0
+         * @since 2024-02-08
          */
         public function getLastAuthenticationStatus(User $user): ?bool
         {
-            /** @var AuthenticationAttempt */
+            // Retrieve the most recent authentication attempt made by the user
             $lastAttempt = $user->getAttempts()->last();
-            return ($lastAttempt instanceof AuthenticationAttempt)
-                ? $lastAttempt->getSuccess()
-                : null;
+
+            // Determine the success status of the last attempt, if it exists
+            return $lastAttempt ? $lastAttempt->getSuccess() : null;
         }
 
         /**
-         * Checks whether a specific user is currently authenticated in the system.
-         * This can be used to verify a user's login status, typically in session management.
+         * Verifies the current user's authentication status, either through an active session or a valid "remember-me" token.
+         * This method is central to session management and access control, ensuring that only authenticated users can
+         * access protected resources. It also handles session regeneration and clean-up of authentication attempts for
+         * users authenticated via "remember-me" tokens.
          *
-         * @return bool Returns true if the user is currently authenticated, false otherwise.
+         * @return bool True if the user is currently authenticated either through a session or a valid "remember-me" token, false otherwise.
+         *
+         * @author Emad Almahdi
+         * @version 3.0.0
+         * @since 2024-02-08
          */
         public function isAuthenticated(): bool
         {
+            // Check for an existing authenticated user session
             if ($this->session->has('user')) {
                 return true;
             }
 
+            // Attempt to authenticate using a "remember-me" token, if present
             $token = filter_input(INPUT_COOKIE, $this->configManager->get('remember_me_cookie_name'), FILTER_SANITIZE_FULL_SPECIAL_CHARS);
             if ($token && $this->tokenManager->isValid($token)) {
-                $user = $this->findUserByToken($token);
-                if ($user) {
-                    $this->session->regenerate();
-                    $this->deleteAuthenticationAttempts($user);
-                    $this->logAuthenticationAttempt($user, true);
-                    $this->session->set('user', $user);
+                if ($user = $this->findUserByToken($token)) {
+                    $this->finalizeAuthentication($user);
                     return true;
                 }
             }
+
             return false;
         }
 
         /**
-         * Finds a user by their remember-me token.
+         * Finalizes the authentication process for a successfully authenticated user.
+         * This includes regenerating the session, clearing previous authentication attempts,
+         * logging the successful attempt, setting the user session, and handling "remember me" functionality if requested.
          *
-         * This function parses the given token to extract the selector and validator components.
-         * It then queries the storage to find a user associated with these token components.
-         * If a matching user is found, their data is returned as an array. If no user is found, null is returned.
-         *
-         * @param string $token The remember-me token associated with a user.
-         * @return User|null An array of user data if a user is found, or null if no user is found.
+         * @param User $user The successfully authenticated user entity.
+         * @param bool $remember If true, sets up "remember me" functionality for the user session.
+         * @author Emad Almahdi
+         * @version 3.0.0
+         * @since 2024-02-08
          */
-        private function findUserByToken(string $token): User
+        private function finalizeAuthentication(User $user, bool $remember = false): void
         {
-            // Parse the token to extract the selector and validator components
-            [$selector] = $this->tokenManager->parseToken($token);
-            return $this->entityManager
-                ->getRepository(Token::class)
-                ->findOneBy(['selector' => $selector])
-                ->getUser();
+            // Regenerate the session to prevent session fixation attacks
+            $this->session->regenerate();
+            // Delete previous failed attempts
+            $this->deleteAuthenticationAttempts($user);
+            // Log successful authentication attempt
+            $this->logAuthenticationAttempt($user, true);
+            // Store the user entity in the session
+            $this->session->set('user', $user->getId());
+
+            if ($remember) {
+                $this->rememberUser($user);
+            }
         }
 
+        /**
+         * Retrieves a user entity based on a provided "remember-me" token. The method decomposes the token into its
+         * constituent parts (selector and validator) and uses these to locate the corresponding token entity in the database.
+         * If a matching token is found, the associated user entity is returned. The method ensures that only valid tokens
+         * can be used to retrieve user information, enhancing the security of the "remember-me" functionality.
+         *
+         * @param string $token The "remember-me" token associated with a user's session.
+         * @return User|null The User entity associated with the given token if a valid token is found; otherwise, null.
+         *
+         * @throws \Exception If the token parsing fails or the token structure is invalid.
+         *
+         * @author Emad Almahdi
+         * @version 3.0.0
+         * @since 2024-02-08
+         */
+        private function findUserByToken(string $token): ?User
+        {
+            // Attempt to parse the token to extract the selector component.
+            [$selector] = $this->tokenManager->parseToken($token);
 
+            // Find the token entity by its selector.
+            $tokenEntity = $this->entityManager->getRepository(Token::class)->findOneBy(['selector' => $selector]);
 
+            // Return the associated User entity if the token is found, null otherwise.
+            return $tokenEntity ? $tokenEntity->getUser() : null;
+        }
 
-
-
-        
         /**
          * Retrieves all authentication attempts made by a specific user. Useful for audit trails, analyzing login patterns,
          * and detecting potential security threats through the examination of failed login attempts. Each attempt includes

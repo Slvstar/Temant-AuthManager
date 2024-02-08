@@ -2,6 +2,7 @@
 use Doctrine\DBAL\DriverManager;
 use Doctrine\ORM\EntityManager;
 use Doctrine\ORM\ORMSetup;
+use Faker\Factory;
 use Temant\AuthManager\AuthManager;
 use Temant\AuthManager\Config\ConfigManager;
 use Temant\AuthManager\Entity\User;
@@ -10,6 +11,9 @@ use Temant\DatabaseManager\DatabaseManager;
 use Temant\SessionManager\SessionManager;
 
 include_once __DIR__ . '/vendor/autoload.php';
+
+
+dd(Factory::create($message, $constructor));
 
 // Create a simple 'default' Doctrine ORM configuration for Attributes
 $config = ORMSetup::createAttributeMetadataConfiguration(
@@ -74,7 +78,7 @@ $auth = new AuthManager($entityManager, new SessionManager, new ConfigManager($e
 // dump($auth->countFailedAuthenticationAttempts($user));
 
 // dd($auth->changePassword($user, 'Slvstar123@'));
-$auth->registerUser('Emado', 'Almahdio', 2, 'emad.storm@gmail.como', 'Slvstar123@');
+$auth->registerUser('Emado', 'Almahdio', 1, 'emad.storm@gmail.como', 'Slvstar123@');
 
 // dd( $auth->authenticate('Emad.A', 'Slvstar123@', true),$auth->unlockAccount($user));
 
