@@ -542,7 +542,6 @@ namespace Temant\AuthManager {
          */
         private function generateUserName(string $firstName, string $lastName): string
         {
-            dd($this->configManager->getBoolean('allow_username_increment'));
             $usernameBase = sprintf('%s.%s', ucfirst($firstName), ucfirst(substr($lastName, 0, 1)));
 
             // Retrieve users with usernames starting with the base username
@@ -558,6 +557,9 @@ namespace Temant\AuthManager {
 
             // If there are matching usernames, append the count + 1 to the base username
             if ($countMatchingUsernames > 0) {
+                if (!$this->configManager->getBoolean('allow_username_increment')) {
+                    throw new Exception("Username Increaments are not allowed!");
+                }
                 return $usernameBase . ($countMatchingUsernames + 1);
             }
 
