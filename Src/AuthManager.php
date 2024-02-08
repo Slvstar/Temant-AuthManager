@@ -452,20 +452,37 @@ namespace Temant\AuthManager {
         }
 
         /**
-         * Retrieves a user's information from the system.
-         * This method is often used to fetch user profile data, settings, or other relevant information
-         * stored in the user's record.
+         * Fetches the currently logged-in user's profile information from the database.
+         * This function queries the database for the user entity associated with the current session's user ID.
+         * It's primarily used to access the logged-in user's profile data, settings, or other pertinent information
+         * that is stored within their record in the system. This method ensures that only authenticated users'
+         * information is retrieved, enhancing security and data integrity.
          *
-         * @return User|null Object containing the user's information if the user is found, or null if no user with the given ID exists.
+         * @return User|null Returns a User entity object containing the logged-in user's information if authentication is verified,
+         *                   otherwise returns null if the user is not authenticated or the user ID does not correspond to an existing record.
+         *
+         * @author Emad Almahdi
+         * @version 3.0.0
+         * @since 2024-02-08
+         * @see User For the structure of the User entity.
+         * @see isAuthenticated() To check the user's authentication status.
+         * @uses Session::get() To retrieve the user ID from the session.
+         * @uses EntityManager::find() To fetch the User entity from the database.
          */
         public function getLoggedInUser(): ?User
         {
-            if ($this->isAuthenticated()) {
-                return $this->entityManager
-                    ->getRepository(User::class)
-                    ->find($this->session->get('user'));
+            // Check if the user is authenticated
+            if (!$this->isAuthenticated()) {
+                return null;
             }
-            return null;
+
+            // Retrieve the user ID stored in the session
+            $userId = $this->session->get('user');
+
+            // Fetch and return the User entity associated with the logged-in user's ID
+            return $this->entityManager
+                ->getRepository(User::class)
+                ->find($userId);
         }
 
         /**
