@@ -24,6 +24,18 @@ namespace Temant\AuthManager\Config {
             return $this->config->findOneBy(['configKey' => $key])->getConfigValue();
         }
 
+        public function getBoolean(string $key): bool
+        {
+            $value = $this->get($key);
+            return filter_var($value, FILTER_VALIDATE_BOOLEAN);
+        }
+
+        public function getInteger(string $key): bool
+        {
+            $value = $this->get($key);
+            return filter_var($value, FILTER_VALIDATE_INT);
+        }
+
         public function has(string $key): bool
         {
             return $this->config->count(['configKey' => $key]) != 0;

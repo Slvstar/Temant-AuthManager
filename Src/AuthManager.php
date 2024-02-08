@@ -539,11 +539,10 @@ namespace Temant\AuthManager {
          * @version 3.0.0
          * @since 2024-02-08 
          * @example generateUserName('John', 'Doe') // Returns 'John.D1' if 'John.D' already exists.
-         *
-         * @internal Used internally for user registration, not intended for external use.
          */
         private function generateUserName(string $firstName, string $lastName): string
         {
+            dd($this->configManager->getAsbool('allow_username_increment'));
             $usernameBase = sprintf('%s.%s', ucfirst($firstName), ucfirst(substr($lastName, 0, 1)));
 
             // Retrieve users with usernames starting with the base username
