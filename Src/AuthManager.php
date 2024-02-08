@@ -31,6 +31,76 @@ namespace Temant\AuthManager {
         ) {
         }
 
+
+        /**
+         * Registers a new user in the system with the provided user data.
+         * This method is typically called during the sign-up process
+         * and involves creating a new user record in the database.
+         *
+         * @param string $firstName The first name of the user.
+         * @param string $lastName The last name of the user.
+         * @param int $role The role Id of the new created User
+         * @param string $email The E-mail of the user.
+         * @param string $password The password of the user.
+         * @return bool Returns true if the user is successfully registered, false otherwise.
+         *              for the provided data or an issue with inserting the new record into the database.
+         */
+        function registerUser(string $firstName, string $lastName, int $role, string $email, string $password): bool
+        {
+            // Generate a username based on the provided first and last name
+            $username = $this->generateUserName($firstName, $lastName);
+
+            // Create a new User entity and set its properties
+            $newUser = (new User)
+                ->setUserName($username)
+                ->setFirstName($firstName)
+                ->setLastName($lastName)
+                ->setEmail($email)
+                ->setPassword($this->hashPassword($password))
+                ->setIsActivated(false)
+                ->setIsLocked(false);
+
+            // Retrieve the desired Role entity from the database
+            $role = $this->entityManager->getRepository(Role::class)->find($role);
+
+            if (!$role) {
+                throw new Exception("User Role Is Not Found!", 1);
+            }
+
+            // Set the Role on the new User entity
+            $newUser->setRole($role);
+
+            // Persist the new User entity to the database
+            $this->entityManager->persist($newUser);
+            $this->entityManager->flush();
+
+            // Additional logic for email verification, etc.
+            if ($this->configManager->get('mail_verify') === 'enabled') {
+                [$selector, $validator] = $this->tokenManager->generateToken();
+
+                $this->tokenManager->saveToken($newUser, 'email_activation', $selector, $validator, (int) $this->configManager->get('mail_activation_token_lifetime'));
+                $this->verifyEmail($newUser, $selector, $validator);
+            }
+
+            return true;
+        }
+
+        public function verifyEmail(User $user, string $selector, string $validator): bool
+        {
+            $email = $this->entityManager->getRepository(User::class)->find($user)->getEmail();
+
+            // set email subject & body
+            $subject = 'Please activate your account';
+            $message = <<<MESSAGE
+                Hi,
+                Please click the following link to activate your account:
+                "https://authy/activate.php?email=$email&selector=$selector&validator=$validator"
+                MESSAGE;
+            // send the email
+
+            return mail($email, $subject, nl2br($message), "From:no-reply@email.com");
+        }
+
         /**
          * Authenticates a user by verifying their provided credentials against stored records.
          * This method is typically called during the login process.
@@ -263,46 +333,28 @@ namespace Temant\AuthManager {
             return true;
         }
 
-        /**
-         * Changes the password for a given user. This method is typically used when a user wants to update their password,
-         * often as part of account settings or security measures.
-         *
-         * @param User $user The unique identifier of the user whose password is to be changed. This could be their username, email address, or any system-specific user ID.
-         * @param string $newPassword The new password that will replace the user's current password. This password will be hashed before storage for security.
-         */
-        public function changePassword(User $user, string $newPassword): void
-        {
-            $user->setPassword($this->hashPassword($newPassword));
-            $this->entityManager->flush();
-        }
 
-        /**
-         * Hashes a plaintext password using a secure hashing algorithm. This method is essential for converting user passwords into a secure format before storing them in the database.
-         *
-         * @param string $password The plaintext password to be hashed.
-         * @return string Returns the hashed version of the password. This hashed password is what should be stored in the user database, never the plaintext version.
-         */
-        private function hashPassword(string $password): string
-        {
-            return password_hash($password, PASSWORD_DEFAULT, ["cost" => 12]);
-        }
 
-        /**
-         * Verifies that a given plaintext password matches a stored hashed password. This method is typically used during the authentication process to validate user login attempts.
-         *
-         * @param User $user The unique identifier of the user.
-         * @param string $password The plaintext password provided by the user during login.
-         * @return bool Returns true if the plaintext password, when hashed, matches the stored hashed password, indicating a successful password match. Returns false otherwise.
-         */
-        private function verifyPassword(User $user, string $password): bool
-        {
-            $hashedPassword = $user->getPassword();
 
-            if (password_needs_rehash($hashedPassword, PASSWORD_DEFAULT, ["cost" => 12])) {
-                $this->changePassword($user, $hashedPassword);
-            }
-            return password_verify($password, $hashedPassword);
-        }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
         /**
          * Activates a user's account to enable login and system access.
@@ -313,8 +365,6 @@ namespace Temant\AuthManager {
          * @author Emad Almahdi
          * @version 3.0.0
          * @since 2024-02-08
-         * @see User::setIsActivated() Related method to set the activation status.
-         * @uses EntityManager::flush() To persist changes to the database.
          */
         public function activateAccount(User $user): void
         {
@@ -331,8 +381,6 @@ namespace Temant\AuthManager {
          * @author Emad Almahdi
          * @version 3.0.0
          * @since 2024-02-08
-         * @see User::setIsActivated() Related method to set the activation status.
-         * @uses EntityManager::flush() To persist changes to the database.
          */
         public function deactivateAccount(User $user): void
         {
@@ -381,8 +429,6 @@ namespace Temant\AuthManager {
          * @author Emad Almahdi
          * @version 3.0.0
          * @since 2024-02-08
-         * @see User::setIsLocked() Related method to set the lock status.
-         * @uses EntityManager::flush() To persist changes to the database.
          */
         public function lockAccount(User $user): void
         {
@@ -399,8 +445,6 @@ namespace Temant\AuthManager {
          * @author Emad Almahdi
          * @version 3.0.0
          * @since 2024-02-08
-         * @see User::setIsLocked() Related method to set the lock status.
-         * @uses EntityManager::flush() To persist changes to the database.
          */
         public function unlockAccount(User $user): void
         {
@@ -466,8 +510,6 @@ namespace Temant\AuthManager {
          * @since 2024-02-08
          * @see User For the structure of the User entity.
          * @see isAuthenticated() To check the user's authentication status.
-         * @uses Session::get() To retrieve the user ID from the session.
-         * @uses EntityManager::find() To fetch the User entity from the database.
          */
         public function getLoggedInUser(): ?User
         {
@@ -486,72 +528,64 @@ namespace Temant\AuthManager {
         }
 
         /**
-         * Registers a new user in the system with the provided user data.
-         * This method is typically called during the sign-up process
-         * and involves creating a new user record in the database.
+         * Updates the password for a specified user, typically invoked within account settings or as a security measure.
+         * This function sets a new password for the user after hashing it for secure storage. It ensures that users' credentials
+         * are kept secure and allows for routine password updates in line with best security practices.
          *
-         * @param string $firstName The first name of the user.
-         * @param string $lastName The last name of the user.
-         * @param int $role The role Id of the new created User
-         * @param string $email The E-mail of the user.
-         * @param string $password The password of the user.
-         * @return bool Returns true if the user is successfully registered, false otherwise.
-         *              for the provided data or an issue with inserting the new record into the database.
+         * @param User $user The user entity whose password is being updated.
+         * @param string $newPassword The new password chosen by the user, to be hashed and stored.
+         *
+         * @author Emad Almahdi
+         * @version 3.0.0
+         * @since 2024-02-08
          */
-        function registerUser(string $firstName, string $lastName, int $role, string $email, string $password): bool
+        private function changePassword(User $user, string $newPassword): void
         {
-            // Generate a username based on the provided first and last name
-            $username = $this->generateUserName($firstName, $lastName);
-
-            // Create a new User entity and set its properties
-            $newUser = (new User)
-                ->setUserName($username)
-                ->setFirstName($firstName)
-                ->setLastName($lastName)
-                ->setEmail($email)
-                ->setPassword($this->hashPassword($password))
-                ->setIsActivated(false)
-                ->setIsLocked(false);
-
-            // Retrieve the desired Role entity from the database
-            $role = $this->entityManager->getRepository(Role::class)->find($role);
-
-            if (!$role) {
-                throw new Exception("User Role Is Not Found!", 1);
-            }
-
-            // Set the Role on the new User entity
-            $newUser->setRole($role);
-
-            // Persist the new User entity to the database
-            $this->entityManager->persist($newUser);
+            $user->setPassword($this->hashPassword($newPassword));
             $this->entityManager->flush();
-
-            // Additional logic for email verification, etc.
-            if ($this->configManager->get('mail_verify') === 'enabled') {
-                [$selector, $validator] = $this->tokenManager->generateToken();
-
-                $this->tokenManager->saveToken($newUser, 'email_activation', $selector, $validator, (int) $this->configManager->get('mail_activation_token_lifetime'));
-                $this->verifyEmail($newUser, $selector, $validator);
-            }
-
-            return true;
         }
 
-        public function verifyEmail(User $user, string $selector, string $validator): bool
+        /**
+         * Converts a plaintext password into a securely hashed version using a modern hashing algorithm.
+         * This method is critical for maintaining the security of user passwords by ensuring that only hashed
+         * versions are stored in the database, thereby safeguarding against potential security breaches.
+         *
+         * @param string $password The plaintext password to be hashed.
+         * @return string The securely hashed password, suitable for storage in the database.
+         *
+         * @author Emad Almahdi
+         * @version 3.0.0
+         * @since 2024-02-08
+         */
+        private function hashPassword(string $password): string
         {
-            $email = $this->entityManager->getRepository(User::class)->find($user)->getEmail();
+            return password_hash($password, PASSWORD_DEFAULT, ["cost" => 12]);
+        }
 
-            // set email subject & body
-            $subject = 'Please activate your account';
-            $message = <<<MESSAGE
-                Hi,
-                Please click the following link to activate your account:
-                "https://authy/activate.php?email=$email&selector=$selector&validator=$validator"
-                MESSAGE;
-            // send the email
+        /**
+         * Validates a plaintext password against its corresponding hashed version stored in the database.
+         * This is a crucial step in the user authentication process, verifying user-provided credentials during login attempts.
+         * Additionally, it checks if the stored hash needs rehashing (e.g., due to a change in the hashing algorithm or parameters)
+         * and updates it accordingly, ensuring continued adherence to best security practices.
+         *
+         * @param User $user The user entity whose password is being verified.
+         * @param string $password The plaintext password provided by the user for verification.
+         * @return bool True if the plaintext password matches the stored hashed password, false otherwise.
+         *
+         * @author Emad Almahdi
+         * @version 3.0.0
+         * @since 2024-02-08
+         */
+        private function verifyPassword(User $user, string $password): bool
+        {
+            $hashedPassword = $user->getPassword();
 
-            return mail($email, $subject, nl2br($message), "From:no-reply@email.com");
+            // Check if the password hash matches the current hashing algorithm and parameters
+            // and rehash if necessary. This ensures the security of stored passwords remains up-to-date.
+            if (password_needs_rehash($hashedPassword, PASSWORD_DEFAULT, ["cost" => 12])) {
+                $this->changePassword($user, $hashedPassword);
+            }
+            return password_verify($password, $hashedPassword);
         }
     }
 }
