@@ -13,8 +13,7 @@
         "symfony/var-dumper": "*",
         "doctrine/orm": "*",
         "doctrine/dbal": "*",
-        "symfony/cache": "*",
-        "fzaninotto/faker": "^1.5"
+        "symfony/cache": "*"
     },
     "require-dev": {
         "phpstan/phpstan": "*"

@@ -2,7 +2,6 @@
 use Doctrine\DBAL\DriverManager;
 use Doctrine\ORM\EntityManager;
 use Doctrine\ORM\ORMSetup;
-use Faker\Factory;
 use Temant\AuthManager\AuthManager;
 use Temant\AuthManager\Config\ConfigManager;
 use Temant\AuthManager\Entity\User;
@@ -13,7 +12,6 @@ use Temant\SessionManager\SessionManager;
 include_once __DIR__ . '/vendor/autoload.php';
 
 
-dd(Factory::create($message, $constructor));
 
 // Create a simple 'default' Doctrine ORM configuration for Attributes
 $config = ORMSetup::createAttributeMetadataConfiguration(
