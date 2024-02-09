@@ -17,8 +17,6 @@ namespace Temant\AuthManager {
 
     class AuthManager implements AuthManagerInterface
     {
-        private const TBL_AUTH_USER = 'authentication_users';
-
         /**
          * @param SessionManagerInterface $session
          * @param ConfigManagerInterface $configManager
