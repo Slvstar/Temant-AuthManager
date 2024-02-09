@@ -5,6 +5,7 @@ use Doctrine\ORM\ORMSetup;
 use Temant\AuthManager\AuthManager;
 use Temant\AuthManager\Config\ConfigManager;
 use Temant\AuthManager\Entity\User;
+use Temant\AuthManager\Exceptions\WeakPasswordException;
 use Temant\AuthManager\TokenManager;
 use Temant\DatabaseManager\DatabaseManager;
 use Temant\SessionManager\SessionManager;
@@ -76,7 +77,7 @@ $auth = new AuthManager($entityManager, new SessionManager, new ConfigManager($e
 // dump($auth->countFailedAuthenticationAttempts($user));
 
 // dd($auth->changePassword($user, 'Slvstar123@'));
-$auth->registerUser('Emado', 'Almahdio', 1, 'emad.storm@gmail.como', 'Slvstar@');
+$auth->registerUser('Emado', 'Almahdio', 1, 'emad.storm@gmail.como', 'slvstar@');
 
 // dd($auth->authenticate('Emad.A', 'Slvstar123@', true));
 

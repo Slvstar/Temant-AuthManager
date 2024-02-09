@@ -10,6 +10,7 @@ namespace Temant\AuthManager {
     use Temant\AuthManager\Entity\Role;
     use Temant\AuthManager\Entity\Token;
     use Temant\AuthManager\Entity\User;
+    use Temant\AuthManager\Exceptions\WeakPasswordException;
     use Temant\AuthManager\Utils\Utils;
     use Temant\CookieManager\CookieManager;
     use Temant\SessionManager\SessionManagerInterface;
@@ -52,10 +53,7 @@ namespace Temant\AuthManager {
             $username = $this->generateUserName($firstName, $lastName);
 
             // Password validation checks
-            if (!$this->validatePassword($password)) {
-                // Password does not meet requirements
-                throw new Exception("Password does not meet the requirements.", 1);
-            }
+            $this->validatePassword($password);
 
             // Create a new User entity and set its properties
             $newUser = (new User)
@@ -97,48 +95,45 @@ namespace Temant\AuthManager {
          * Validates a password against the configured password requirements.
          *
          * @param string $password The password to validate.
-         * @return bool Returns true if the password meets the requirements, false otherwise.
          */
-        function validatePassword(string $password): bool
+        function validatePassword(string $password): void
         {
             $config = $this->configManager;
 
             // Check minimum length requirem
             if (!is_null($this->configManager->get('password_min_length'))) {
                 if (strlen($password) < $this->configManager->getInteger('password_min_length')) {
-                    return false;
+                    throw new WeakPasswordException("The password is so short");
                 }
             }
 
             // Check if uppercase letter is required
-            if (!is_null($this->configManager->get('password_min_length'))) {
+            if (!is_null($this->configManager->get('password_require_uppercase'))) {
                 if ($this->configManager->getBoolean('password_require_uppercase') && !preg_match('/[A-Z]/', $password)) {
-                    return false;
+                    throw new WeakPasswordException("The password must contain at least one uppercase char");
                 }
             }
 
             // Check if lowercase letter is required
-            if (!is_null($this->configManager->get('password_min_length'))) {
+            if (!is_null($this->configManager->get('password_require_lowercase'))) {
                 if ($this->configManager->getBoolean('password_require_lowercase') && !preg_match('/[a-z]/', $password)) {
-                    return false;
+                    throw new WeakPasswordException("The password must contain at least one lowercase char");
                 }
             }
 
             // Check if numeric digit is required
-            if (!is_null($this->configManager->get('password_min_length'))) {
+            if (!is_null($this->configManager->get('password_require_numeric'))) {
                 if ($this->configManager->getBoolean('password_require_numeric') && !preg_match('/\d/', $password)) {
-                    return false;
+                    throw new WeakPasswordException("The password must contain at least one numeric char");
                 }
             }
 
             // Check if special character is required
-            if (!is_null($this->configManager->get('password_min_length'))) {
+            if (!is_null($this->configManager->get('password_require_special'))) {
                 if ($this->configManager->getBoolean('password_require_special') && !preg_match('/[^a-zA-Z\d]/', $password)) {
-                    return false;
+                    throw new WeakPasswordException("The password must contain a special char");
                 }
             }
-
-            return true;
         }
 
         /**
