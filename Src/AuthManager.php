@@ -53,7 +53,7 @@ namespace Temant\AuthManager {
             $username = $this->generateUserName($firstName, $lastName);
 
             // Password validation checks
-            $this->validatePassword($password);
+            $validatedPassword = $this->validatePassword($password);
 
             // Role ID validation checks
             $validatedRole = $this->validateRole($roleId);
@@ -64,7 +64,7 @@ namespace Temant\AuthManager {
                 ->setFirstName($firstName)
                 ->setLastName($lastName)
                 ->setEmail($email)
-                ->setPassword($this->hashPassword($password))
+                ->setPassword($validatedPassword)
                 ->setIsActivated(false)
                 ->setIsLocked(false)
                 ->setRole($validatedRole);
@@ -82,6 +82,12 @@ namespace Temant\AuthManager {
             }
 
             return true;
+        }
+
+        public function removeUser(User $user)
+        {
+            $this->entityManager->remove($user);
+            $this->entityManager->flush();
         }
 
         /**
@@ -108,9 +114,11 @@ namespace Temant\AuthManager {
          * Validates a password against the configured password requirements.
          *
          * @param string $password The password to validate.
+         * @return string The securely hashed password, suitable for storage in the database.
+         * 
          * @throws WeakPasswordException If the password is not matching the recommended settings
          */
-        private function validatePassword(string $password): void
+        private function validatePassword(string $password): string
         {
             // Check minimum length requirem
             if (!is_null($this->configManager->get('password_min_length'))) {
@@ -146,6 +154,8 @@ namespace Temant\AuthManager {
                     throw new WeakPasswordException("The password must contain a special char");
                 }
             }
+
+            return $this->hashPassword($password);
         }
 
         /**

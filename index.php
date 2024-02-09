@@ -44,7 +44,6 @@ $user = $entityManager->getRepository(User::class)->findOneBy(['username' => 'Em
 
 // dd($user->getTokens()->toArray());
 
-$user = $entityManager->getRepository(User::class)->findOneBy(['username' => 'Emad.A']);
 
 
 $tokenManager = new TokenManager($entityManager);
@@ -77,7 +76,7 @@ $auth = new AuthManager($entityManager, new SessionManager, new ConfigManager($e
 // dump($auth->countFailedAuthenticationAttempts($user));
 
 // dd($auth->changePassword($user, 'Slvstar123@'));
-$auth->registerUser('Emado', 'Almahdio', 2, 'emad.storm@gmail.como', 'Slvstar123@');
+$auth->registerUser('Emad', 'Almahdi', 1, 'emad.storm@gmail.como', 'Slvstar123@');
 
 // dd($auth->authenticate('Emad.A', 'Slvstar123@', true));
 
