@@ -10,6 +10,7 @@ namespace Temant\AuthManager {
     use Temant\AuthManager\Entity\Role;
     use Temant\AuthManager\Entity\Token;
     use Temant\AuthManager\Entity\User;
+    use Temant\AuthManager\Exceptions\EmailNotValidException;
     use Temant\AuthManager\Exceptions\RoleNotFoundException;
     use Temant\AuthManager\Exceptions\WeakPasswordException;
     use Temant\AuthManager\Utils\Utils;
@@ -46,6 +47,7 @@ namespace Temant\AuthManager {
          *
          * @throws RoleNotFoundException When the specified user role ID is not found in the database.
          * @throws WeakPasswordException If the password is not matching the recommended settings
+         * @throws EmailNotValidException When the Email is not a valid email address 
          */
         function registerUser(string $firstName, string $lastName, int $roleId, string $email, string $password): bool
         {
@@ -58,12 +60,15 @@ namespace Temant\AuthManager {
             // Role ID validation checks
             $validatedRole = $this->validateRole($roleId);
 
+            // Email validation checks
+            $validatedEmail = $this->validateEmail($email);
+
             // Create a new User entity and set its properties
             $newUser = (new User)
                 ->setUserName($username)
                 ->setFirstName($firstName)
                 ->setLastName($lastName)
-                ->setEmail($email)
+                ->setEmail($validatedEmail)
                 ->setPassword($validatedPassword)
                 ->setIsActivated(false)
                 ->setIsLocked(false)
@@ -94,6 +99,7 @@ namespace Temant\AuthManager {
          * Validates a role against the configured password requirements.
          *
          * @param int $roleId The role ID to validate.
+         * @return Role The validated Email Entity
          * @throws RoleNotFoundException When the specified user role ID is not found in the database.
          */
         private function validateRole(int $roleId): Role
@@ -108,6 +114,20 @@ namespace Temant\AuthManager {
 
             // Set the Role on the new User entity
             return $roleEntity;
+        }
+
+        /**
+         * Validates an email against the configured email requirements.
+         *
+         * @param string $email Email to validate.
+         * @throws EmailNotValidException When the Email is not a valid email address 
+         */
+        private function validateEmail(string $email): string
+        {
+            if (filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                return $email;
+            }
+            throw new EmailNotValidException;
         }
 
         /**

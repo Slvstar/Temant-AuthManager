@@ -5,14 +5,11 @@ use Doctrine\ORM\ORMSetup;
 use Temant\AuthManager\AuthManager;
 use Temant\AuthManager\Config\ConfigManager;
 use Temant\AuthManager\Entity\User;
-use Temant\AuthManager\Exceptions\WeakPasswordException;
 use Temant\AuthManager\TokenManager;
 use Temant\DatabaseManager\DatabaseManager;
 use Temant\SessionManager\SessionManager;
 
 include_once __DIR__ . '/vendor/autoload.php';
-
-
 
 // Create a simple 'default' Doctrine ORM configuration for Attributes
 $config = ORMSetup::createAttributeMetadataConfiguration(
@@ -31,7 +28,7 @@ $connection = DriverManager::getConnection([
 $entityManager = new EntityManager($connection, $config);
 
 
-$user = $entityManager->getRepository(User::class)->findOneBy(['username' => 'Emad.A']);
+$user = $entityManager->getRepository(User::class)->findOneBy(['username' => 'Emad.A2']);
 
 // $user->addToken((new Token())
 //     ->setUser($user)
@@ -61,6 +58,7 @@ $db = new DatabaseManager(new mysqli('localhost', 'intradb', 'Proto!728agt22Ws',
 
 $auth = new AuthManager($entityManager, new SessionManager, new ConfigManager($entityManager), new TokenManager($entityManager));
 
+// $auth->removeUser($user);
 // dd($auth->getLoggedInUser());
 
 // dd($auth->getLastAuthenticationStatus($user));
@@ -76,7 +74,7 @@ $auth = new AuthManager($entityManager, new SessionManager, new ConfigManager($e
 // dump($auth->countFailedAuthenticationAttempts($user));
 
 // dd($auth->changePassword($user, 'Slvstar123@'));
-$auth->registerUser('Emad', 'Almahdi', 1, 'emad.storm@gmail.como', 'Slvstar123@');
+$auth->registerUser('Emad', 'Almahdi', 1, 'emad.storm@f.como', 'Slvstar123@');
 
 // dd($auth->authenticate('Emad.A', 'Slvstar123@', true));
 
