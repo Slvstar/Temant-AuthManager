@@ -10,6 +10,7 @@ namespace Temant\AuthManager {
     use Temant\AuthManager\Entity\Role;
     use Temant\AuthManager\Entity\Token;
     use Temant\AuthManager\Entity\User;
+    use Temant\AuthManager\Exceptions\RoleNotFoundException;
     use Temant\AuthManager\Exceptions\WeakPasswordException;
     use Temant\AuthManager\Utils\Utils;
     use Temant\CookieManager\CookieManager;
@@ -37,21 +38,25 @@ namespace Temant\AuthManager {
          *
          * @param string $firstName The first name of the user.
          * @param string $lastName The last name of the user.
-         * @param int $role The role ID of the new user.
+         * @param int $roleId The role ID of the new user.
          * @param string $email The email address of the user.
          * @param string $password The password of the user.
          * @return bool Returns true if the user is successfully registered, false otherwise.
          *              for the provided data or an issue with inserting the new record into the database.
          *
-         * @throws Exception When the specified user role is not found in the database.
+         * @throws RoleNotFoundException When the specified user role ID is not found in the database.
+         * @throws WeakPasswordException If the password is not matching the recommended settings
          */
-        function registerUser(string $firstName, string $lastName, int $role, string $email, string $password): bool
+        function registerUser(string $firstName, string $lastName, int $roleId, string $email, string $password): bool
         {
             // Generate a username based on the provided first and last name
             $username = $this->generateUserName($firstName, $lastName);
 
             // Password validation checks
             $this->validatePassword($password);
+
+            // Role ID validation checks
+            $validatedRole = $this->validateRole($roleId);
 
             // Create a new User entity and set its properties
             $newUser = (new User)
@@ -61,18 +66,8 @@ namespace Temant\AuthManager {
                 ->setEmail($email)
                 ->setPassword($this->hashPassword($password))
                 ->setIsActivated(false)
-                ->setIsLocked(false);
-
-            // Retrieve the desired Role entity from the database
-            $roleEntity = $this->entityManager->getRepository(Role::class)->find($role);
-
-            // Throw an exception if the specified user role is not found
-            if (!$roleEntity) {
-                throw new Exception("User Role Is Not Found!", 1);
-            }
-
-            // Set the Role on the new User entity
-            $newUser->setRole($roleEntity);
+                ->setIsLocked(false)
+                ->setRole($validatedRole);
 
             // Persist the new User entity to the database
             $this->entityManager->persist($newUser);
@@ -90,14 +85,33 @@ namespace Temant\AuthManager {
         }
 
         /**
+         * Validates a role against the configured password requirements.
+         *
+         * @param int $roleId The role ID to validate.
+         * @throws RoleNotFoundException When the specified user role ID is not found in the database.
+         */
+        private function validateRole(int $roleId): Role
+        {
+            // Retrieve the desired Role entity from the database
+            $roleEntity = $this->entityManager->getRepository(Role::class)->find($roleId);
+
+            // Throw an exception if the specified user role is not found
+            if (!$roleEntity) {
+                throw new RoleNotFoundException;
+            }
+
+            // Set the Role on the new User entity
+            return $roleEntity;
+        }
+
+        /**
          * Validates a password against the configured password requirements.
          *
          * @param string $password The password to validate.
+         * @throws WeakPasswordException If the password is not matching the recommended settings
          */
-        function validatePassword(string $password): void
+        private function validatePassword(string $password): void
         {
-            $config = $this->configManager;
-
             // Check minimum length requirem
             if (!is_null($this->configManager->get('password_min_length'))) {
                 if (strlen($password) < $this->configManager->getInteger('password_min_length')) {

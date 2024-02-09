@@ -10,10 +10,5 @@ namespace Temant\AuthManager\Exceptions {
         {
             parent::__construct($message, 10001);
         }
-
-        public function __toString(): string
-        {
-            return $this->message;
-        }
     }
 }

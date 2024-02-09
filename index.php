@@ -77,7 +77,7 @@ $auth = new AuthManager($entityManager, new SessionManager, new ConfigManager($e
 // dump($auth->countFailedAuthenticationAttempts($user));
 
 // dd($auth->changePassword($user, 'Slvstar123@'));
-$auth->registerUser('Emado', 'Almahdio', 1, 'emad.storm@gmail.como', 'slvstar@');
+$auth->registerUser('Emado', 'Almahdio', 2, 'emad.storm@gmail.como', 'Slvstar123@');
 
 // dd($auth->authenticate('Emad.A', 'Slvstar123@', true));
 
