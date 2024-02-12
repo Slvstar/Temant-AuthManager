@@ -6,6 +6,7 @@ use Temant\AuthManager\AuthManager;
 use Temant\AuthManager\Config\ConfigManager;
 use Temant\AuthManager\Entity\Permission;
 use Temant\AuthManager\Entity\Role;
+use Temant\AuthManager\Entity\User;
 use Temant\AuthManager\TokenManager;
 use Temant\DatabaseManager\DatabaseManager;
 use Temant\SessionManager\SessionManager;
@@ -29,17 +30,17 @@ $connection = DriverManager::getConnection([
 $entityManager = new EntityManager($connection, $config);
 
 
-$role = $entityManager->getRepository(Role::class)->find(1)->removePermission($entityManager->getRepository(Permission::class)->find(1));
+//$role = $entityManager->getRepository(Role::class)->find(1)->removePermission($entityManager->getRepository(Permission::class)->find(1));
 
-$entityManager->flush();
+//$entityManager->flush();
 
-dd(11);
+//dd(11);
 
-$user->setRole($entityManager->getRepository(Role::class)->find(2));
+//$user->setRole($entityManager->getRepository(Role::class)->find(2));
 
-dump($entityManager->flush());
+//dump($entityManager->flush());
 
-dd($user->getRole()->getName());
+//dd($user->getRole()->getName());
 
 // $user->addToken((new Token())
 //     ->setUser($user)
@@ -51,6 +52,8 @@ dd($user->getRole()->getName());
 // $entityManager->flush();
 
 // dd($user->getTokens()->toArray());
+
+$user = $entityManager->getRepository(User::class)->findOneBy(['username' => 'Emad.A']);
 
 
 
@@ -85,9 +88,9 @@ $auth = new AuthManager($entityManager, new SessionManager, new ConfigManager($e
 // dump($auth->countFailedAuthenticationAttempts($user));
 
 // dd($auth->changePassword($user, 'Slvstar123@'));
-$auth->registerUser('Emad', 'Almahdi', 1, 'emad.storm@f.como', 'Slvstar123@');
-
-// dd($auth->authenticate('Emad.A', 'Slvstar123@', true));
+// $auth->registerUser('Emad', 'Almahdi', 1, 'emad.storm@f.como', 'Slvstar123@');
+$auth->activateAccount($user);
+dd($auth->authenticate('Emad.A', 'Slvstar123@', true), $user->getRole()->getPermissions()->toArray());
 
 // $session->destroy();
 // var_dump($auth->isAuthenticated());
