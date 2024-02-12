@@ -6,6 +6,7 @@ use Temant\AuthManager\AuthManager;
 use Temant\AuthManager\Config\ConfigManager;
 use Temant\AuthManager\Entity\Permission;
 use Temant\AuthManager\Entity\Role;
+use Temant\AuthManager\Entity\Token;
 use Temant\AuthManager\Entity\User;
 use Temant\AuthManager\TokenManager;
 use Temant\DatabaseManager\DatabaseManager;
@@ -55,6 +56,9 @@ $entityManager = new EntityManager($connection, $config);
 
 $user = $entityManager->getRepository(User::class)->findOneBy(['username' => 'Emad.A']);
 
+
+
+dd($entityManager->getRepository(Token::class)->find(1));
 
 
 $tokenManager = new TokenManager($entityManager);
