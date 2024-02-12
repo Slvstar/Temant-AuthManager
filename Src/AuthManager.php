@@ -6,7 +6,7 @@ namespace Temant\AuthManager {
     use Doctrine\ORM\EntityManager;
     use Exception;
     use Temant\AuthManager\Config\ConfigManagerInterface;
-    use Temant\AuthManager\Entity\AuthenticationAttempt;
+    use Temant\AuthManager\Entity\Attempt;
     use Temant\AuthManager\Entity\Role;
     use Temant\AuthManager\Entity\Token;
     use Temant\AuthManager\Entity\User;
@@ -303,7 +303,7 @@ namespace Temant\AuthManager {
             $timePeriod = $timePeriod ?? new DateTime();
 
             return $user->getAttempts()
-                ->filter(fn(AuthenticationAttempt $attempt): bool =>
+                ->filter(fn(Attempt $attempt): bool =>
                     !$attempt->getSuccess() && $attempt->getCreatedAt() >= $timePeriod)
                 ->count();
         }
@@ -354,7 +354,7 @@ namespace Temant\AuthManager {
         public function deleteAuthenticationAttempts(User $user): bool
         {
             $deleteCount = $this->entityManager
-                ->getRepository(AuthenticationAttempt::class)
+                ->getRepository(Attempt::class)
                 ->createQueryBuilder('a')
                 ->delete()
                 ->where('a.user = :user')
@@ -476,7 +476,7 @@ namespace Temant\AuthManager {
          * detailed information such as the timestamp, outcome (success or failure), and originating IP address.
          *
          * @param User $user The user entity whose authentication attempts are being queried.
-         * @return AuthenticationAttempt[] An array of AuthenticationAttempt entities associated with the user, providing a historical log of authentication attempts.
+         * @return Attempt[] An array of Attempt entities associated with the user, providing a historical log of authentication attempts.
          *
          * @author Emad Almahdi
          * @version 3.0.0
@@ -505,7 +505,7 @@ namespace Temant\AuthManager {
          */
         public function logAuthenticationAttempt(User $user, bool $success, ?string $reason = null, ?string $ipAddress = null, ?string $userAgent = null): bool
         {
-            $attempt = (new AuthenticationAttempt)
+            $attempt = (new Attempt)
                 ->setUser($user)
                 ->setSuccess($success)
                 ->setReason($reason)
@@ -515,7 +515,7 @@ namespace Temant\AuthManager {
             $this->entityManager->persist($attempt);
             $this->entityManager->flush();
 
-            return $this->entityManager->getRepository(AuthenticationAttempt::class)->find($attempt) !== null;
+            return $this->entityManager->getRepository(Attempt::class)->find($attempt) !== null;
         }
 
         /**

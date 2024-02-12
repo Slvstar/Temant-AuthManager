@@ -53,9 +53,9 @@ namespace Temant\AuthManager\Entity {
         #[OneToMany(targetEntity: Token::class, mappedBy: "user", cascade: ["persist", "remove"])]
         private Collection $tokens;
 
-        #[OneToMany(targetEntity: AuthenticationAttempt::class, mappedBy: "user", cascade: ["persist", "remove"])]
+        #[OneToMany(targetEntity: Attempt::class, mappedBy: "user", cascade: ["persist", "remove"])]
         /**
-         * @var Collection<AuthenticationAttempt>
+         * @var Collection<Attempt>
          */
         private Collection $attempts;
 
