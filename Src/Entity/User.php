@@ -183,10 +183,18 @@ namespace Temant\AuthManager\Entity {
             return $this->attempts;
         }
 
-        public function setAttempts(Collection $attempts): self
+        public function addAttempt(Attempt $attempt): self
         {
-            $this->attempts = $attempts;
+            if (!$this->attempts->contains($attempt)) {
+                $this->attempts[] = $attempt;
+                $attempt->setUser($this);
+            }
             return $this;
+        }
+
+        public function removeAttempt(Attempt $attempt): bool
+        {
+            return $this->attempts->removeElement($attempt);
         }
 
         public function getRole(): ?Role
