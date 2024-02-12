@@ -47,9 +47,13 @@ namespace Temant\AuthManager {
          *
          * @throws RoleNotFoundException When the specified user role ID is not found in the database.
          * @throws WeakPasswordException If the password is not matching the recommended settings
-         * @throws EmailNotValidException When the Email is not a valid email address 
+         * @throws EmailNotValidException When the Email is not a valid email address
+         *
+         * @author Emad Almahdi
+         * @version 3.0.0
+         * @since 2024-02-08
          */
-        function registerUser(string $firstName, string $lastName, int $roleId, string $email, string $password): bool
+        public function registerUser(string $firstName, string $lastName, int $roleId, string $email, string $password): bool
         {
             // Generate a username based on the provided first and last name
             $username = $this->generateUserName($firstName, $lastName);
@@ -82,14 +86,26 @@ namespace Temant\AuthManager {
             if ($this->configManager->get('mail_verify') === 'enabled') {
                 [$selector, $validator] = $this->tokenManager->generateToken();
 
-                $this->tokenManager->saveToken($newUser, 'email_activation', $selector, $validator, (int) $this->configManager->get('mail_activation_token_lifetime'));
+                $this->tokenManager->saveToken($newUser, 'email_activation', $selector, $validator, $this->configManager->getInteger('mail_activation_token_lifetime'));
                 $this->verifyEmail($newUser, $selector, $validator);
             }
 
             return true;
         }
 
-        public function removeUser(User $user)
+        /**
+         * Removes a specified user entity from the database. This method is responsible for deleting the user record
+         * associated with the provided User object. It calls the EntityManager's remove and flush methods to ensure
+         * that changes are persisted to the database. This action is irreversible, and all information related to the
+         * user will be permanently deleted from the database.
+         *
+         * @param User $user The user entity to be removed from the database.
+         *
+         * @author Emad Almahdi
+         * @version 3.0.0
+         * @since 2024-02-08
+         */
+        public function removeUser(User $user): void
         {
             $this->entityManager->remove($user);
             $this->entityManager->flush();
@@ -101,6 +117,10 @@ namespace Temant\AuthManager {
          * @param int $roleId The role ID to validate.
          * @return Role The validated Email Entity
          * @throws RoleNotFoundException When the specified user role ID is not found in the database.
+         *
+         * @author Emad Almahdi
+         * @version 3.0.0
+         * @since 2024-02-08
          */
         private function validateRole(int $roleId): Role
         {
@@ -121,6 +141,10 @@ namespace Temant\AuthManager {
          *
          * @param string $email Email to validate.
          * @throws EmailNotValidException When the Email is not a valid email address 
+         *
+         * @author Emad Almahdi
+         * @version 3.0.0
+         * @since 2024-02-08
          */
         private function validateEmail(string $email): string
         {
@@ -137,6 +161,10 @@ namespace Temant\AuthManager {
          * @return string The securely hashed password, suitable for storage in the database.
          * 
          * @throws WeakPasswordException If the password is not matching the recommended settings
+         *
+         * @author Emad Almahdi
+         * @version 3.0.0
+         * @since 2024-02-08
          */
         private function validatePassword(string $password): string
         {
@@ -187,6 +215,10 @@ namespace Temant\AuthManager {
          * @param string $selector The token selector for email verification.
          * @param string $validator The token validator for email verification.
          * @return bool Returns true if the email is successfully sent, false otherwise.
+         *
+         * @author Emad Almahdi
+         * @version 3.0.0
+         * @since 2024-02-08
          */
         public function verifyEmail(User $user, string $selector, string $validator): bool
         {
@@ -272,7 +304,7 @@ namespace Temant\AuthManager {
             [$selector, $validator, $token] = $this->tokenManager->generateToken();
 
             // Retrieve configuration for 'remember_me' token lifetime and cookie name
-            $tokenLifetimeDays = (int) $this->configManager->get('remember_me_token_lifetime');
+            $tokenLifetimeDays = $this->configManager->getInteger('remember_me_token_lifetime');
             $cookieName = $this->configManager->get('remember_me_cookie_name');
 
             // Calculate the cookie's expiration time based on the token's lifetime
@@ -382,7 +414,7 @@ namespace Temant\AuthManager {
             $lastAttempt = $user->getAttempts()->last();
 
             // Determine the success status of the last attempt, if it exists
-            return $lastAttempt ? $lastAttempt->getSuccess() : null;
+            return $lastAttempt?->getSuccess();
         }
 
         /**
