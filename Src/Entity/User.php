@@ -181,11 +181,6 @@ namespace Temant\AuthManager\Entity {
             return $this->tokens->removeElement($token);
         }
 
-        /**
-         * The function "getAttempts" returns a collection of attempts.
-         * 
-         * @return Collection<AuthenticationAttempt> a Collection of attempts.
-         */
         public function getAttempts(): Collection
         {
             return $this->attempts;

@@ -4,6 +4,7 @@ use Doctrine\ORM\EntityManager;
 use Doctrine\ORM\ORMSetup;
 use Temant\AuthManager\AuthManager;
 use Temant\AuthManager\Config\ConfigManager;
+use Temant\AuthManager\Entity\Role;
 use Temant\AuthManager\Entity\User;
 use Temant\AuthManager\TokenManager;
 use Temant\DatabaseManager\DatabaseManager;
@@ -29,6 +30,12 @@ $entityManager = new EntityManager($connection, $config);
 
 
 $user = $entityManager->getRepository(User::class)->findOneBy(['username' => 'Emad.A2']);
+
+$user->setRole($entityManager->getRepository(Role::class)->find(2));
+
+dump($entityManager->flush());
+
+dd($user->getRole()->getName());
 
 // $user->addToken((new Token())
 //     ->setUser($user)
