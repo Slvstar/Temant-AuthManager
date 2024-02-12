@@ -29,7 +29,14 @@ $connection = DriverManager::getConnection([
 $entityManager = new EntityManager($connection, $config);
 
 
-$user = $entityManager->getRepository(User::class)->findOneBy(['username' => 'Emad.A2']);
+$role = $entityManager->getRepository(Role::class)->find(1);
+
+$role->addUser($entityManager->getRepository(User::class)->findOneBy(['username' => "Emad.A"]));
+ 
+
+$entityManager->flush();
+
+die(1);
 
 $user->setRole($entityManager->getRepository(Role::class)->find(2));
 

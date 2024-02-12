@@ -1,10 +1,13 @@
 <?php
 
 namespace Temant\AuthManager\Entity {
+    use Doctrine\Common\Collections\ArrayCollection;
+    use Doctrine\Common\Collections\Collection;
     use Doctrine\ORM\Mapping\Column;
     use Doctrine\ORM\Mapping\Entity;
     use Doctrine\ORM\Mapping\GeneratedValue;
     use Doctrine\ORM\Mapping\Id;
+    use Doctrine\ORM\Mapping\OneToMany;
     use Doctrine\ORM\Mapping\Table;
 
     #[Entity]
@@ -21,6 +24,14 @@ namespace Temant\AuthManager\Entity {
 
         #[Column(name: "description")]
         private string $description;
+
+        #[OneToMany(targetEntity: User::class, mappedBy: "role")]
+        private Collection $users;
+
+        public function __construct()
+        {
+            $this->users = new ArrayCollection();
+        }
 
         public function getId(): int
         {
@@ -46,6 +57,30 @@ namespace Temant\AuthManager\Entity {
         public function setDescription(string $description): self
         {
             $this->description = $description;
+            return $this;
+        }
+
+        public function getUsers(): Collection
+        {
+            return $this->users;
+        }
+
+        public function addUser(User $user): self
+        {
+            if (!$this->users->contains($user)) {
+                $this->users[] = $user;
+                $user->setRole($this);
+            }
+            return $this;
+        }
+
+        public function removeUser(User $user): self
+        {
+            if ($this->users->removeElement($user)) {
+                if ($user->getRole() === $this) {
+                    $user->setRole(null);
+                }
+            }
             return $this;
         }
     }
