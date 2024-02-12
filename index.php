@@ -4,8 +4,8 @@ use Doctrine\ORM\EntityManager;
 use Doctrine\ORM\ORMSetup;
 use Temant\AuthManager\AuthManager;
 use Temant\AuthManager\Config\ConfigManager;
+use Temant\AuthManager\Entity\Permission;
 use Temant\AuthManager\Entity\Role;
-use Temant\AuthManager\Entity\User;
 use Temant\AuthManager\TokenManager;
 use Temant\DatabaseManager\DatabaseManager;
 use Temant\SessionManager\SessionManager;
@@ -29,14 +29,11 @@ $connection = DriverManager::getConnection([
 $entityManager = new EntityManager($connection, $config);
 
 
-$role = $entityManager->getRepository(Role::class)->find(1);
-
-$role->addUser($entityManager->getRepository(User::class)->findOneBy(['username' => "Emad.A"]));
- 
+$role = $entityManager->getRepository(Role::class)->find(1)->removePermission($entityManager->getRepository(Permission::class)->find(1));
 
 $entityManager->flush();
 
-die(1);
+dd(11);
 
 $user->setRole($entityManager->getRepository(Role::class)->find(2));
 

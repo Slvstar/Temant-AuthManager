@@ -7,6 +7,8 @@ namespace Temant\AuthManager\Entity {
     use Doctrine\ORM\Mapping\Entity;
     use Doctrine\ORM\Mapping\GeneratedValue;
     use Doctrine\ORM\Mapping\Id;
+    use Doctrine\ORM\Mapping\JoinTable;
+    use Doctrine\ORM\Mapping\ManyToMany;
     use Doctrine\ORM\Mapping\OneToMany;
     use Doctrine\ORM\Mapping\Table;
 
@@ -28,8 +30,13 @@ namespace Temant\AuthManager\Entity {
         #[OneToMany(targetEntity: User::class, mappedBy: "role")]
         private Collection $users;
 
+        #[ManyToMany(targetEntity: Permission::class, inversedBy: "roles")]
+        #[JoinTable(name: "authentication_role_permissions")]
+        private Collection $permissions;
+
         public function __construct()
         {
+            $this->permissions = new ArrayCollection();
             $this->users = new ArrayCollection();
         }
 
@@ -80,6 +87,28 @@ namespace Temant\AuthManager\Entity {
                 if ($user->getRole() === $this) {
                     $user->setRole(null);
                 }
+            }
+            return $this;
+        }
+
+        public function getPermissions(): Collection
+        {
+            return $this->permissions;
+        }
+
+        public function addPermission(Permission $permission): self
+        {
+            if (!$this->permissions->contains($permission)) {
+                $this->permissions[] = $permission;
+                $permission->addRole($this);
+            }
+            return $this;
+        }
+
+        public function removePermission(Permission $permission): self
+        {
+            if ($this->permissions->removeElement($permission)) {
+                $permission->removeRole($this);
             }
             return $this;
         }
