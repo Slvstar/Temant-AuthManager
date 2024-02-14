@@ -92,9 +92,9 @@ $auth = new AuthManager($entityManager, new SessionManager, new ConfigManager($e
 // dump($auth->countFailedAuthenticationAttempts($user));
 
 // dd($auth->changePassword($user, 'Slvstar123@'));
-// $auth->registerUser('Emad', 'Almahdi', 1, 'emad.storm@f.como', 'Slvstar123@');
+$auth->registerUser('Emad', 'Almahdi', 1, 'emad.storm@f.como', 'Slvstar123@');
 $auth->activateAccount($user);
-dd($auth->authenticate('Emad.A', 'Slvstar123@', true), $user->getRole()->getPermissions()->toArray());
+// dd($auth->authenticate('Emad.A', 'Slvstar123@', true), $user->getRole()->getPermissions()->toArray());
 
 // $session->destroy();
 // var_dump($auth->isAuthenticated());

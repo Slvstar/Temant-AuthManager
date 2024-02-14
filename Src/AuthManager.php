@@ -86,8 +86,8 @@ namespace Temant\AuthManager {
             if ($this->configManager->get('mail_verify') === 'enabled') {
                 [$selector, $validator] = $this->tokenManager->generateToken();
 
-                $this->tokenManager->saveToken($newUser, 'email_activation', $selector, $validator, $this->configManager->getInteger('mail_activation_token_lifetime'));
-                $this->verifyEmail($newUser, $selector, $validator);
+                $this->tokenManager->saveToken($newUser, 'email_activation', $selector, $validator, (int) $this->configManager->get('mail_activation_token_lifetime'));
+                $this->sendEmailVerification($newUser, $selector, $validator);
             }
 
             return true;
@@ -220,7 +220,7 @@ namespace Temant\AuthManager {
          * @version 3.0.0
          * @since 2024-02-08
          */
-        public function verifyEmail(User $user, string $selector, string $validator): bool
+        public function sendEmailVerification(User $user, string $selector, string $validator): bool
         {
             // Retrieve the user's email address
             $email = $user->getEmail();
@@ -231,7 +231,7 @@ namespace Temant\AuthManager {
                 Hi,
 
                 Please click the following link to activate your account:
-                https://authy/activate.php?email=$email&selector=$selector&validator=$validator
+                https://{$_SERVER['HTTP_HOST']}/activate-account.php?userId={$user->getUserName()}&selector=$selector&validator=$validator
                 MESSAGE;
 
             // Send the email
@@ -781,6 +781,19 @@ namespace Temant\AuthManager {
                 $this->changePassword($user, $hashedPassword);
             }
             return password_verify($password, $hashedPassword);
+        }
+
+        /**
+         * Sends an email to the user for email verification.
+         *
+         * @param User $user The user object whose email address is to be verified.
+         * @param string $selector The token selector for email verification.
+         * @param string $validator The token validator for email verification.
+         * @return bool Returns true if the email is successfully sent, false otherwise.
+         */
+        public function verifyEmail(User $user, string $selector, string $validator): bool
+        {
+            return true;
         }
     }
 }

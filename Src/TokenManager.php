@@ -196,12 +196,17 @@ namespace Temant\AuthManager {
         /**
          * Determines if a token is expired based on its stored expiry date.
          *
-         * @param string $expiryDate Token's expiry date in 'Y-m-d H:i:s' format.
+         * @param DateTime|null $expiryDate Token's expiry date in 'Y-m-d H:i:s' format.
          * @return bool Returns true if the token is expired, otherwise false.
          */
-        public static function isTokenExpired(string $expiryDate): bool
+        public static function isTokenExpired(?DateTime $expiryDate): bool
         {
-            return strtotime($expiryDate) < time();
+            // Create a new DateTime object for the current date and time
+            $now = new DateTime();
+
+            // Compare the expiry date with the current date and time
+            // If $expiryDate is null or before the current time, the token is expired
+            return $expiryDate === null || $expiryDate < $now;
         }
 
         /**
@@ -218,6 +223,11 @@ namespace Temant\AuthManager {
                 ->setParameter('currentDateTime', new DateTime(), Types::DATETIME_MUTABLE)
                 ->getQuery()
                 ->execute();
+        }
+
+        public function isTokenAlive(Token $token): bool
+        {
+            return !self::isTokenExpired($token->getExpiresAt());
         }
     }
 }
