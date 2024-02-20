@@ -4,11 +4,11 @@ namespace Temant\AuthManager\Exceptions {
     use Exception;
     use Throwable;
 
-    class WeakPasswordException extends Exception implements Throwable
+    class UsernameIncrementException extends Exception implements Throwable
     {
         public function __construct(protected $message = "")
         {
-            parent::__construct($message, 10003);
+            parent::__construct($message, 10002);
         }
     }
 }

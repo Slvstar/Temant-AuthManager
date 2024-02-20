@@ -8,7 +8,7 @@ namespace Temant\AuthManager\Exceptions {
     {
         public function __construct(protected $message = "The selected Role ID doesn't exist")
         {
-            parent::__construct($message, 10002);
+            parent::__construct($message, 10001);
         }
     }
 }

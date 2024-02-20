@@ -8,7 +8,7 @@ namespace Temant\AuthManager\Exceptions {
     {
         public function __construct(protected $message = "The selected Email is not valid")
         {
-            parent::__construct($message, 10002);
+            parent::__construct($message, 10000);
         }
     }
 }

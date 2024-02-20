@@ -4,7 +4,6 @@ namespace Temant\AuthManager {
     use DateTime;
     use DateTimeInterface;
     use Doctrine\ORM\EntityManager;
-    use Exception;
     use Temant\AuthManager\Config\ConfigManagerInterface;
     use Temant\AuthManager\Entity\Attempt;
     use Temant\AuthManager\Entity\Role;
@@ -12,6 +11,7 @@ namespace Temant\AuthManager {
     use Temant\AuthManager\Entity\User;
     use Temant\AuthManager\Exceptions\EmailNotValidException;
     use Temant\AuthManager\Exceptions\RoleNotFoundException;
+    use Temant\AuthManager\Exceptions\UsernameIncrementException;
     use Temant\AuthManager\Exceptions\WeakPasswordException;
     use Temant\AuthManager\Utils\Utils;
     use Temant\CookieManager\CookieManager;
@@ -26,7 +26,7 @@ namespace Temant\AuthManager {
          * Choose a value based on the application's performance and security requirements.
          */
         private const PASSWPRD_COST = 12;
-        
+
         /**
          * @param SessionManagerInterface $session
          * @param ConfigManagerInterface $configManager
@@ -492,8 +492,6 @@ namespace Temant\AuthManager {
          * @param string $token The "remember-me" token associated with a user's session.
          * @return User|null The User entity associated with the given token if a valid token is found; otherwise, null.
          *
-         * @throws \Exception If the token parsing fails or the token structure is invalid.
-         *
          * @author Emad Almahdi
          * @version 3.0.0
          * @since 2024-02-08
@@ -689,7 +687,7 @@ namespace Temant\AuthManager {
             // If there are matching usernames, append the count + 1 to the base username
             if ($countMatchingUsernames > 0) {
                 if (!$this->configManager->getBoolean('allow_username_increment')) {
-                    throw new Exception("Username Increaments are not allowed!");
+                    throw new UsernameIncrementException("Username increments are not allowed according to the current configuration settings.");
                 }
                 return $usernameBase . ($countMatchingUsernames + 1);
             }
