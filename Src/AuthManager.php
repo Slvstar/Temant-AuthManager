@@ -19,7 +19,14 @@ namespace Temant\AuthManager {
 
     class AuthManager implements AuthManagerInterface
     {
+        /**
+         * Sets the bcrypt password hashing cost.
+         * Increasing this value enhances security by making the hashing process slower,
+         * thereby reducing vulnerability to brute force attacks.
+         * Choose a value based on the application's performance and security requirements.
+         */
         private const PASSWPRD_COST = 12;
+        
         /**
          * @param SessionManagerInterface $session
          * @param ConfigManagerInterface $configManager
