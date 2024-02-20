@@ -19,6 +19,7 @@ namespace Temant\AuthManager {
 
     class AuthManager implements AuthManagerInterface
     {
+        private const PASSWPRD_COST = 12;
         /**
          * @param SessionManagerInterface $session
          * @param ConfigManagerInterface $configManager
@@ -754,7 +755,7 @@ namespace Temant\AuthManager {
          */
         private function hashPassword(string $password): string
         {
-            return password_hash($password, PASSWORD_DEFAULT, ["cost" => 12]);
+            return password_hash($password, PASSWORD_DEFAULT, ["cost" => self::PASSWPRD_COST]);
         }
 
         /**
@@ -777,7 +778,7 @@ namespace Temant\AuthManager {
 
             // Check if the password hash matches the current hashing algorithm and parameters
             // and rehash if necessary. This ensures the security of stored passwords remains up-to-date.
-            if (password_needs_rehash($hashedPassword, PASSWORD_DEFAULT, ["cost" => 12])) {
+            if (password_needs_rehash($hashedPassword, PASSWORD_DEFAULT, ["cost" => self::PASSWPRD_COST])) {
                 $this->changePassword($user, $hashedPassword);
             }
             return password_verify($password, $hashedPassword);

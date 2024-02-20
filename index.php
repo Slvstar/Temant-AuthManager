@@ -58,7 +58,7 @@ $user = $entityManager->getRepository(User::class)->findOneBy(['username' => 'Em
 
 
 
-dd($entityManager->getRepository(Token::class)->find(1));
+ ($entityManager->getRepository(Token::class)->find(1));
 
 
 $tokenManager = new TokenManager($entityManager);
