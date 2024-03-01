@@ -25,7 +25,7 @@ namespace Temant\AuthManager {
          * thereby reducing vulnerability to brute force attacks.
          * Choose a value based on the application's performance and security requirements.
          */
-        private const PASSWPRD_COST = 12;
+        private const PASSWORD_COST = 12;
 
         /**
          * @param SessionManagerInterface $session
@@ -120,10 +120,10 @@ namespace Temant\AuthManager {
         }
 
         /**
-         * Validates a role against the configured password requirements.
+         * Validates a role against the configured role requirements.
          *
          * @param int $roleId The role ID to validate.
-         * @return Role The validated Email Entity
+         * @return Role The validated Role Entity
          * @throws RoleNotFoundException When the specified user role ID is not found in the database.
          *
          * @author Emad Almahdi
@@ -760,7 +760,7 @@ namespace Temant\AuthManager {
          */
         private function hashPassword(string $password): string
         {
-            return password_hash($password, PASSWORD_DEFAULT, ["cost" => self::PASSWPRD_COST]);
+            return password_hash($password, PASSWORD_DEFAULT, ["cost" => self::PASSWORD_COST]);
         }
 
         /**
@@ -783,7 +783,7 @@ namespace Temant\AuthManager {
 
             // Check if the password hash matches the current hashing algorithm and parameters
             // and rehash if necessary. This ensures the security of stored passwords remains up-to-date.
-            if (password_needs_rehash($hashedPassword, PASSWORD_DEFAULT, ["cost" => self::PASSWPRD_COST])) {
+            if (password_needs_rehash($hashedPassword, PASSWORD_DEFAULT, ["cost" => self::PASSWORD_COST])) {
                 $this->changePassword($user, $hashedPassword);
             }
             return password_verify($password, $hashedPassword);
