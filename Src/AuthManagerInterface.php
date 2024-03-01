@@ -18,7 +18,7 @@ namespace Temant\AuthManager {
          * @param string $email The email address of the user.
          * @param string $password The password of the user.
          * @return bool Returns true if the user is successfully registered, false otherwise.
-         *              for the provided data or an issue with inserting the new record into the database. 
+         *              for the provided data or an issue with inserting the new record into the database.
          */
         public function registerUser(string $firstName, string $lastName, int $role, string $email, string $password): bool;
 
