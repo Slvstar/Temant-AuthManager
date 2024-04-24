@@ -1,6 +1,6 @@
 {
     "name": "temant/auth-manager",
-    "version": "1.0.1-alpha",
+    "version": "1.0.2-alpha",
     "autoload": {
         "psr-4": {
             "Temant\\AuthManager\\": "Src/"
