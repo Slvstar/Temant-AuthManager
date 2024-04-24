@@ -13,7 +13,7 @@ namespace Temant\AuthManager {
          *
          * @return string[] An array containing the selector, hashed validator, and the full token string.
          */
-        public static function generateToken(): array;
+        public function generateToken(): array;
 
         /**
          * Decomposes a token into its constituent selector and validator components.
@@ -21,7 +21,7 @@ namespace Temant\AuthManager {
          * @param string $token The complete token string to be dissected.
          * @return string[]|null An array containing the selector and validator, or null if the format is incorrect.
          */
-        public static function parseToken(string $token): ?array;
+        public function parseToken(string $token): ?array;
 
         /**
          * Stores a token in the database along with associated user information and expiration details.
