@@ -231,5 +231,19 @@ namespace Temant\AuthManager {
          * @return User[] An array of User entities representing all registered users in the system.
          */
         public function listAllRegistredUsers(): array;
+
+        /**
+         * Converts a plaintext password into a securely hashed version using a modern hashing algorithm.
+         * This method is critical for maintaining the security of user passwords by ensuring that only hashed
+         * versions are stored in the database, thereby safeguarding against potential security breaches.
+         *
+         * @param string $password The plaintext password to be hashed.
+         * @return string The securely hashed password, suitable for storage in the database.
+         *
+         * @author Emad Almahdi
+         * @version 3.0.0
+         * @since 2024-02-08
+         */
+        public function hashPassword(string $password): string;
     }
 }

@@ -762,7 +762,7 @@ namespace Temant\AuthManager {
          * @version 3.0.0
          * @since 2024-02-08
          */
-        private function hashPassword(string $password): string
+        public function hashPassword(string $password): string
         {
             return password_hash($password, PASSWORD_DEFAULT, ["cost" => self::PASSWORD_COST]);
         }
