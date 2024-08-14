@@ -15,5 +15,6 @@
     },
     "require-dev": {
         "symfony/var-dumper": "*",
-        "phpstan/phpstan": "*"    }
+        "phpstan/phpstan": "*"
+    }
 }
