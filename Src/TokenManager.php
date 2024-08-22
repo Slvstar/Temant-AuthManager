@@ -1,7 +1,6 @@
 <?php declare(strict_types=1);
 
 namespace Temant\AuthManager {
-    use DateInterval;
     use DateTime;
     use Doctrine\DBAL\Types\Types;
     use Doctrine\ORM\EntityManagerInterface;
@@ -40,7 +39,7 @@ namespace Temant\AuthManager {
             $validator = bin2hex(random_bytes(32));
             // Securely hashed validator.
             $hashedValidator = password_hash($validator, PASSWORD_DEFAULT);
-            return [$selector, $hashedValidator, "$selector:" . $validator];
+            return [$selector, $hashedValidator, "$selector:$validator"];
         }
 
         /**
@@ -75,7 +74,7 @@ namespace Temant\AuthManager {
         public function parseToken(string $token): ?array
         {
             $parts = explode(':', $token);
-            return count($parts) === 2 ? $parts : null; // Validates token format.
+            return count($parts) === 2 ? $parts : null;
         }
 
         /**
@@ -95,12 +94,12 @@ namespace Temant\AuthManager {
                 ->setType($type)
                 ->setSelector($selector)
                 ->setValidator($validator)
-                ->setExpiresAt((new DateTime())->add(new DateInterval('P' . $days . 'D')));
+                ->setExpiresAt(new DateTime("+{$days} days"));
 
             $this->entityManager->persist($token);
             $this->entityManager->flush();
 
-            return !is_null($this->entityManager->getRepository(Token::class)->find($token->getId()));
+            return $this->entityManager->contains($token);
         }
 
         /**
@@ -123,90 +122,75 @@ namespace Temant\AuthManager {
             return $query->getQuery()->execute();
         }
 
-
         /**
          * Retrieves a token from the database using its selector.
          *
          * @param string $selector Unique identifier of the token.
-         * @return string[]|null Returns token data if found and valid, otherwise null.
+         * @return Token|null Returns token data if found and valid, otherwise null.
          */
-        public function getTokenBySelector(string $selector): ?array
+        public function getTokenBySelector(string $selector): Token|null
         {
-            $token = $this->entityManager
+            return $this->entityManager
                 ->getRepository(Token::class)
                 ->findOneBy(['selector' => $selector]);
-
-            if ($token) {
-                return [
-                    'selector' => $token->getSelector(),
-                    'validator' => $token->getValidator()
-                ];
-            }
-            return null;
         }
 
         /**
          * Validates a token by matching the provided validator against the stored hashed validator.
+         * Also checks if the token has expired.
          *
          * @param string $token The token to validate.
-         * @return bool Returns true if the token is valid, otherwise false.
+         * @return bool Returns true if the token is valid and not expired, otherwise false.
          */
         public function isValid(string $token): bool
         {
-            [$selector, $validator] = $this->parseToken($token) ?: ['', ''];
+            [$selector, $validator] = $this->parseToken($token) ?? [null, null];
             $tokenData = $this->getTokenBySelector($selector);
-            return isset($tokenData['validator']) && password_verify($validator, $tokenData['validator']);
+
+            return $tokenData &&
+                password_verify($validator, $tokenData->getValidator()) &&
+                !$this->hasTokenExpired($tokenData->getExpiresAt());
         }
 
         /**
-         * Deletes all tokens associated with a specific user ID, commonly used for logging out or account deactivation.
+         * Deletes all tokens associated with a specific user, commonly used for logging out or account deactivation.
          *
-         * @param string $userId User ID whose tokens are to be deleted.
+         * @param User $user User whose tokens are to be deleted.
          * @return int Number of tokens deleted.
          */
-        public function removeAllTokensForUser(string $userId): int
+        public function removeAllTokensForUser(User $user): int
         {
-            return $this->entityManager
-                ->createQueryBuilder()
-                ->delete(Token::class, 't')
-                ->where('t.userId = :userId')
-                ->setParameter('userId', $userId)
-                ->getQuery()
-                ->execute();
+            $count = 0;
+            $user->getTokens()->map(function (Token $token) use (&$count): void {
+                $this->entityManager->remove($token);
+                $count++;
+            });
+
+            $this->entityManager->flush(); 
+
+            return $count;
         }
 
         /**
          * List all tokens associated with a specific user ID.
          *
-         * @param string $userId User ID whose tokens are to be listed.
+         * @param User $user User whose tokens are to be listed.
          * @return Token[] A list of tokens or empty array
          */
-        public function listAllTokensForUser(string $userId): array
+        public function listAllTokensForUser(User $user): array
         {
-            return $this->entityManager
-                ->createQueryBuilder()
-                ->select('t')
-                ->from(Token::class, 't')
-                ->where('t.userId = :userId')
-                ->setParameter('userId', $userId)
-                ->getQuery()
-                ->execute();
+            return $user->getTokens()->toArray();
         }
 
         /**
          * Determines if a token is expired based on its stored expiry date.
          *
-         * @param DateTime|null $expiryDate Token's expiry date in 'Y-m-d H:i:s' format.
+         * @param DateTime $expiryDate Token's expiry date in 'Y-m-d H:i:s' format.
          * @return bool Returns true if the token is expired, otherwise false.
          */
-        public static function isTokenExpired(?DateTime $expiryDate): bool
+        private function hasTokenExpired(DateTime $expiryDate): bool
         {
-            // Create a new DateTime object for the current date and time
-            $now = new DateTime();
-
-            // Compare the expiry date with the current date and time
-            // If $expiryDate is null or before the current time, the token is expired
-            return $expiryDate === null || $expiryDate < $now;
+            return $expiryDate < new DateTime;
         }
 
         /**
@@ -223,11 +207,6 @@ namespace Temant\AuthManager {
                 ->setParameter('currentDateTime', new DateTime(), Types::DATETIME_MUTABLE)
                 ->getQuery()
                 ->execute();
-        }
-
-        public function isTokenAlive(Token $token): bool
-        {
-            return !self::isTokenExpired($token->getExpiresAt());
         }
     }
 }

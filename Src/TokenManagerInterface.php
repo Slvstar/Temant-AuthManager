@@ -48,9 +48,9 @@ namespace Temant\AuthManager {
          * Retrieves a token from the database using its selector, verifying that it hasn't expired.
          *
          * @param string $selector Unique identifier of the token.
-         * @return string[]|null Returns token data if found and valid, otherwise null.
+         * @return Token|null Returns token data if found and valid, otherwise null.
          */
-        public function getTokenBySelector(string $selector): ?array;
+        public function getTokenBySelector(string $selector): Token|null;
 
         /**
          * Validates a token by matching the provided validator against the stored hashed validator.
@@ -63,26 +63,18 @@ namespace Temant\AuthManager {
         /**
          * List all tokens associated with a specific user ID.
          *
-         * @param string $userId User ID whose tokens are to be listed.
+         * @param User $user User whose tokens are to be listed.
          * @return Token[] A list of tokens or empty array
          */
-        public function listAllTokensForUser(string $userId): array;
+        public function listAllTokensForUser(User $user): array;
 
         /**
          * Deletes all tokens associated with a specific user ID, commonly used for logging out or account deactivation.
          *
-         * @param string $userId User ID whose tokens are to be deleted.
+         * @param User $User user whose tokens are to be deleted.
          * @return int Number of tokens deleted.
          */
-        public function removeAllTokensForUser(string $userId): int;
-
-        /**
-         * Determines if a token is expired based on its stored expiry date.
-         *
-         * @param string $expiryDate Token's expiry date in 'Y-m-d H:i:s' format.
-         * @return bool Returns true if the token is expired, otherwise false.
-         */
-        public static function isTokenExpired(?DateTime $expiryDate): bool;
+        public function removeAllTokensForUser(User $user): int;
 
         /**
          * Removes expired tokens from the database to maintain efficiency and security.
