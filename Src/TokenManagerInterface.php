@@ -1,7 +1,6 @@
 <?php declare(strict_types=1);
 
 namespace Temant\AuthManager {
-    use DateTime;
     use Temant\AuthManager\Entity\Token;
     use Temant\AuthManager\Entity\User;
 
@@ -30,10 +29,10 @@ namespace Temant\AuthManager {
          * @param string $type Purpose of the token (e.g., 'session', 'reset').
          * @param string $selector Token's unique identifier for lookup.
          * @param string $validator Hashed validator part of the token for security.
-         * @param int $days Lifespan of the token in days, defaults to 1 day.
+         * @param int $seconds Lifespan of the token in seconds.
          * @return bool Returns true upon successful storage, otherwise false.
          */
-        public function saveToken(User $user, string $type, string $selector, string $validator, int $days = 1): bool;
+        public function saveToken(User $user, string $type, string $selector, string $validator, int $seconds): bool;
 
         /**
          * Deletes tokens from the database based on specified conditions or all tokens if no conditions are provided.
