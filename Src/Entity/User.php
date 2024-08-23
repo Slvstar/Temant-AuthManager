@@ -209,5 +209,10 @@ namespace Temant\AuthManager\Entity {
             $this->role = $role;
             return $this;
         }
+
+        public function getPermissions(): array 
+        {
+            return $this->role->getPermissions()->toArray();
+        }
     }
 }
