@@ -509,7 +509,7 @@ namespace Temant\AuthManager {
             $tokenEntity = $this->entityManager->getRepository(Token::class)->findOneBy(['selector' => $selector]);
 
             // Return the associated User entity if the token is found, null otherwise.
-            return $tokenEntity ? $tokenEntity->getUser() : null;
+            return $tokenEntity?->getUser();
         }
 
         /**

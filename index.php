@@ -30,15 +30,15 @@ $emad = $entityManager->getRepository(User::class)->find(1);
 
 $tokenManager = new TokenManager($entityManager);
 
-[$selector, $hashedValidator, $token] = $tokenManager->generateToken();
-// dump($selector, $hashedValidator, $token);
+// [$selector, $hashedValidator, $token] = $tokenManager->generateToken();
+//  dump($selector, $hashedValidator, $token);
 
-// $tokenManager->saveToken($emad, 'test_token', $selector, $hashedValidator); 
+// $tokenManager->saveToken($emad, 'test_token', $selector, $hashedValidator, 15);
 
 
-// dd($tokenManager->removeAllTokensForUser($emad));
-// dump($tokenManager->isValid('f067615f596dbe2122caffb4e0d4af8b:ab3a0f8fd926e9b8b512e40ec2fe521cd1107d22cda7ffb749ec7242ab63cf71'));
-dd($tokenManager->getToken('f067615f596dbe2122caffb4e0d4af8b:ab3a0f8fd926e9b8b512e40ec2fe521cd1107d22cda7ffb749ec7242ab63cf71'));
+// dump($tokenManager->removeAllTokensForUser($emad));
+dump($tokenManager->isValid("889896ac01b3fb0330f7210ffffffffffde0c15de6:7535c9c4cc5e38cb9f07fcb628392af287d950b9c26b55e0f23eb1a01fbaff21")); 
+
 /**
   0 => "2fc09f8a2e1123dc0fb51f7138a6f253"
   1 => "$2y$10$PM8YQ7qmgr3S9.z0NqxRjusFiNxx33t8oZRH4gvXJ6JRMuXFwlon."
