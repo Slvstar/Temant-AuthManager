@@ -832,5 +832,10 @@ namespace Temant\AuthManager {
         {
             return $this->entityManager->getRepository(User::class)->findAll();
         }
+
+        public function listAllRoles(): array
+        {
+            return $this->entityManager->getRepository(Role::class)->findAll();
+        }
     }
 }
