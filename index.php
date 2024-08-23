@@ -28,6 +28,9 @@ $entityManager = new EntityManager($connection, $config);
 
 $emad = $entityManager->getRepository(User::class)->find(1);
 
+
+dd($emad->hasPermission('View Dashboard'));
+
 $tokenManager = new TokenManager($entityManager);
 
 // [$selector, $hashedValidator, $token] = $tokenManager->generateToken();
@@ -37,7 +40,7 @@ $tokenManager = new TokenManager($entityManager);
 
 
 // dump($tokenManager->removeAllTokensForUser($emad));
-dump($tokenManager->isValid("889896ac01b3fb0330f7210ffffffffffde0c15de6:7535c9c4cc5e38cb9f07fcb628392af287d950b9c26b55e0f23eb1a01fbaff21")); 
+dump($tokenManager->isValid("889896ac01b3fb0330f7210ffffffffffde0c15de6:7535c9c4cc5e38cb9f07fcb628392af287d950b9c26b55e0f23eb1a01fbaff21"));
 
 /**
   0 => "2fc09f8a2e1123dc0fb51f7138a6f253"

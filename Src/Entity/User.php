@@ -210,9 +210,16 @@ namespace Temant\AuthManager\Entity {
             return $this;
         }
 
-        public function getPermissions(): array 
+        public function listPermissions(): array
         {
             return $this->role->getPermissions()->toArray();
+        }
+
+        public function hasPermission(string $permissionName): bool
+        {
+            return $this->role
+                ->getPermissions()
+                ->exists(fn($key, $permission): bool => $permission->getName() === $permissionName);
         }
     }
 }
