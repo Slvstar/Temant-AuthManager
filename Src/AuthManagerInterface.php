@@ -5,22 +5,31 @@ namespace Temant\AuthManager {
     use DateTimeInterface;
     use Temant\AuthManager\Entity\Attempt;
     use Temant\AuthManager\Entity\User;
+    use Temant\AuthManager\Exceptions\EmailNotValidException;
+    use Temant\AuthManager\Exceptions\RoleNotFoundException;
+    use Temant\AuthManager\Exceptions\WeakPasswordException;
 
     interface AuthManagerInterface
     {
         /**
          * Registers a new user in the system with the provided user data.
-         * This method is typically called during the sign-up process
-         * and involves creating a new user record in the database.
-         *
+         * 
+         * This method is typically called during the sign-up process and involves creating a new user record in the database.
+         * Additional features, such as email verification, may be triggered based on system settings.
+         * 
          * @param string $firstName The first name of the user.
          * @param string $lastName The last name of the user.
-         * @param int $roleId The role ID of the new user.
-         * @param string $email The email address of the user.
-         * @param string $password The password of the user.
-         * @return User The newly register user Entity
+         * @param int $roleId The role ID of the new user. Must correspond to a valid role.
+         * @param string $email The email address of the user. Must be in a valid email format.
+         * @param string $password The password of the user. Must comply with the system's password policy.
+         * 
+         * @return User|null The newly registered User entity, or null if the user could not be created.
+         * 
+         * @throws RoleNotFoundException If the provided role ID does not exist in the system.
+         * @throws WeakPasswordException If the password does not meet the system's security requirements.
+         * @throws EmailNotValidException If the provided email address is not valid.
          */
-        public function registerUser(string $firstName, string $lastName, int $role, string $email, string $password): User;
+        public function registerUser(string $firstName, string $lastName, int $roleId, string $email, string $password): ?User;
 
         /**
          * Removes a specified user entity from the database. This method is responsible for deleting the user record

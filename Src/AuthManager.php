@@ -29,9 +29,12 @@ namespace Temant\AuthManager {
         private const int PASSWORD_COST = 12;
 
         /**
-         * @param SessionManagerInterface $session
-         * @param ConfigManagerInterface $configManager
-         * @param TokenManager $tokenManager
+         * Constructor for initializing dependencies in the authentication manager.
+         * 
+         * @param EntityManager $entityManager EntityManager for handling database operations.
+         * @param SessionManagerInterface $sessionManagerInterface Manages user sessions and session data.
+         * @param ConfigManagerInterface $configManager Handles the configuration settings required for the authentication process.
+         * @param TokenManager $tokenManager Manages token generation, validation, and renewal.
          */
         public function __construct(
             private readonly EntityManager $entityManager,
@@ -43,25 +46,23 @@ namespace Temant\AuthManager {
 
         /**
          * Registers a new user in the system with the provided user data.
-         * This method is typically called during the sign-up process
-         * and involves creating a new user record in the database.
-         *
+         * 
+         * This method is typically invoked during the sign-up process and creates a new user record in the database.
+         * Additional features like email verification can be triggered depending on the system configuration.
+         * 
          * @param string $firstName The first name of the user.
          * @param string $lastName The last name of the user.
-         * @param int $roleId The role ID of the new user.
-         * @param string $email The email address of the user.
-         * @param string $password The password of the user.
-         * @return User The newly register user Entity
-         *
-         * @throws RoleNotFoundException When the specified user role ID is not found in the database.
-         * @throws WeakPasswordException If the password is not matching the recommended settings
-         * @throws EmailNotValidException When the Email is not a valid email address
-         *
-         * @author Emad Almahdi
-         * @version 3.0.0
-         * @since 2024-02-08
+         * @param int $roleId The role ID of the new user. Must reference a valid role in the system.
+         * @param string $email The email address of the user. Must be a valid email format.
+         * @param string $password The password of the user. Must meet the system's security criteria.
+         * 
+         * @return User|null The newly registered User entity, or null if the user could not be created.
+         * 
+         * @throws RoleNotFoundException If the specified user role ID does not exist in the system.
+         * @throws WeakPasswordException If the provided password does not meet the security standards.
+         * @throws EmailNotValidException If the provided email is not valid.
          */
-        public function registerUser(string $firstName, string $lastName, int $roleId, string $email, string $password): User
+        public function registerUser(string $firstName, string $lastName, int $roleId, string $email, string $password): ?User
         {
             // Generate a username based on the provided first and last name
             $username = $this->generateUserName($firstName, $lastName);
@@ -90,11 +91,11 @@ namespace Temant\AuthManager {
             $this->entityManager->persist($newUser);
             $this->entityManager->flush();
 
-            // Additional logic for email verification, etc.
+            // Additional logic for email verification, if enabled
             if ($this->configManager->get('mail_verify') === 'enabled') {
                 [$selector, $validator] = $this->tokenManager->generateToken();
 
-                $this->tokenManager->saveToken($newUser, 'email_activation', $selector, $validator, (int) $this->configManager->get('mail_activation_token_lifetime'));
+                $this->tokenManager->saveToken($newUser, 'email_activation', $selector, $validator, $this->configManager->getInteger('mail_activation_token_lifetime'));
                 $this->sendEmailVerification($newUser, $selector, $validator);
             }
 
@@ -108,10 +109,6 @@ namespace Temant\AuthManager {
          * user will be permanently deleted from the database.
          *
          * @param User $user The user entity to be removed from the database.
-         *
-         * @author Emad Almahdi
-         * @version 3.0.0
-         * @since 2024-02-08
          */
         public function removeUser(User $user): void
         {
@@ -125,10 +122,6 @@ namespace Temant\AuthManager {
          * @param int $roleId The role ID to validate.
          * @return Role The validated Role Entity
          * @throws RoleNotFoundException When the specified user role ID is not found in the database.
-         *
-         * @author Emad Almahdi
-         * @version 3.0.0
-         * @since 2024-02-08
          */
         private function validateRole(int $roleId): Role
         {
@@ -149,10 +142,6 @@ namespace Temant\AuthManager {
          *
          * @param string $email Email to validate.
          * @throws EmailNotValidException When the Email is not a valid email address 
-         *
-         * @author Emad Almahdi
-         * @version 3.0.0
-         * @since 2024-02-08
          */
         private function validateEmail(string $email): string
         {
@@ -223,10 +212,6 @@ namespace Temant\AuthManager {
          * @param string $selector The token selector for email verification.
          * @param string $validator The token validator for email verification.
          * @return bool Returns true if the email is successfully sent, false otherwise.
-         *
-         * @author Emad Almahdi
-         * @version 3.0.0
-         * @since 2024-02-08
          */
         public function sendEmailVerification(User $user, string $selector, string $validator): bool
         {
@@ -254,10 +239,6 @@ namespace Temant\AuthManager {
          * @param string $password The plaintext password provided by the user for authentication.
          * @param bool $remember Optional. If set to true, the user's session will be remembered across browser sessions.
          * @return bool Returns true if the provided credentials are valid and the user is successfully authenticated, false otherwise.
-         *
-         * @author Emad Almahdi
-         * @version 3.0.0
-         * @since 2024-02-08
          */
         public function authenticate(string $username, string $password, bool $remember = false): bool
         {
@@ -337,10 +318,6 @@ namespace Temant\AuthManager {
          * @param User $user The user entity whose failed authentication attempts are being counted.
          * @param DateTimeInterface|null $timePeriod The starting point in time from which to count failed attempts. Defaults to the current time if not provided.
          * @return int The total count of failed authentication attempts by the user since the specified time.
-         *
-         * @author Emad Almahdi
-         * @version 3.0.0
-         * @since 2024-02-08
          */
         public function countFailedAuthenticationAttempts(User $user, ?DateTimeInterface $timePeriod = null): int
         {
@@ -360,10 +337,6 @@ namespace Temant\AuthManager {
          *
          * @return bool True if the logout process completes successfully, including the removal of any persistent tokens and session destruction.
          *              False if any part of the process fails, indicating a potential issue in the logout workflow.
-         *
-         * @author Emad Almahdi
-         * @version 3.0.0
-         * @since 2024-02-08
          */
         public function deauthenticate(): bool
         {
@@ -390,10 +363,6 @@ namespace Temant\AuthManager {
          * @param User $user The user entity whose authentication attempt records are to be purged from the system.
          * @return bool True if all authentication attempt records for the specified user are successfully deleted, indicating a complete
          *              reset of the user's authentication history. False if the deletion process encounters an error, which may require further investigation.
-         *
-         * @author Emad Almahdi
-         * @version 3.0.0
-         * @since 2024-02-08
          */
         public function deleteAuthenticationAttempts(User $user): bool
         {
@@ -415,10 +384,6 @@ namespace Temant\AuthManager {
          *
          * @param User $user The user entity whose last authentication attempt is being queried.
          * @return bool|null True if the last attempt was successful, false if it was unsuccessful, or null if there are no recorded attempts for the user.
-         *
-         * @author Emad Almahdi
-         * @version 3.0.0
-         * @since 2024-02-08
          */
         public function getLastAuthenticationStatus(User $user): ?bool
         {
@@ -436,10 +401,6 @@ namespace Temant\AuthManager {
          * users authenticated via "remember-me" tokens.
          *
          * @return bool True if the user is currently authenticated either through a session or a valid "remember-me" token, false otherwise.
-         *
-         * @author Emad Almahdi
-         * @version 3.0.0
-         * @since 2024-02-08
          */
         public function isAuthenticated(): bool
         {
@@ -495,10 +456,6 @@ namespace Temant\AuthManager {
          *
          * @param string $token The "remember-me" token associated with a user's session.
          * @return ?User The User entity associated with the given token if a valid token is found; otherwise, null.
-         *
-         * @author Emad Almahdi
-         * @version 3.0.0
-         * @since 2024-02-08
          */
         private function findUserByToken(string $token): ?User
         {
@@ -519,10 +476,6 @@ namespace Temant\AuthManager {
          *
          * @param User $user The user entity whose authentication attempts are being queried.
          * @return Attempt[] An array of Attempt entities associated with the user, providing a historical log of authentication attempts.
-         *
-         * @author Emad Almahdi
-         * @version 3.0.0
-         * @since 2024-02-08
          */
         public function listAuthenticationAttempts(User $user): array
         {
@@ -540,10 +493,6 @@ namespace Temant\AuthManager {
          * @param string|null $ipAddress Optional IP address from which the attempt was made, defaults to the current user's IP if not provided.
          * @param string|null $userAgent Optional identifier for the user agent from which the attempt originated, defaults to the current request's user agent if not provided.
          * @return bool Indicating if the attempt was logged successfully.
-         *
-         * @author Emad Almahdi
-         * @version 3.0.0
-         * @since 2024-02-08
          */
         public function logAuthenticationAttempt(User $user, bool $success, ?string $reason = null, ?string $ipAddress = null, ?string $userAgent = null): bool
         {
@@ -565,10 +514,6 @@ namespace Temant\AuthManager {
          * This method is typically invoked post-account creation or during account reactivation processes.
          *
          * @param User $user The user entity whose account is to be activated.
-         *
-         * @author Emad Almahdi
-         * @version 3.0.0
-         * @since 2024-02-08
          */
         public function activateAccount(User $user): void
         {
@@ -581,10 +526,6 @@ namespace Temant\AuthManager {
          * This method can be utilized for administrative purposes or upon a user's request for account deactivation.
          *
          * @param User $user The user entity whose account is to be deactivated.
-         *
-         * @author Emad Almahdi
-         * @version 3.0.0
-         * @since 2024-02-08
          */
         public function deactivateAccount(User $user): void
         {
@@ -597,10 +538,6 @@ namespace Temant\AuthManager {
          *
          * @param User $user The user entity to check for activation status.
          * @return bool True if the account is activated, false otherwise.
-         *
-         * @author Emad Almahdi
-         * @version 3.0.0
-         * @since 2024-02-08
          * @see User::getIsActivated() Used to retrieve the user's activation status.
          */
         public function isActivated(User $user): bool
@@ -613,10 +550,6 @@ namespace Temant\AuthManager {
          *
          * @param User $user The user entity to check for lock status.
          * @return bool True if the account is locked, false otherwise.
-         *
-         * @author Emad Almahdi
-         * @version 3.0.0
-         * @since 2024-02-08
          * @see User::getIsLocked() Used to retrieve the user's lock status.
          */
         public function isLocked(User $user): bool
@@ -629,10 +562,6 @@ namespace Temant\AuthManager {
          * following multiple failed login attempts or for administrative purposes.
          *
          * @param User $user The user entity whose account is to be locked.
-         *
-         * @author Emad Almahdi
-         * @version 3.0.0
-         * @since 2024-02-08
          */
         public function lockAccount(User $user): void
         {
@@ -645,10 +574,6 @@ namespace Temant\AuthManager {
          * This is generally used to restore access for users whose accounts were previously locked.
          *
          * @param User $user The user entity whose account is to be unlocked.
-         *
-         * @author Emad Almahdi
-         * @version 3.0.0
-         * @since 2024-02-08
          */
         public function unlockAccount(User $user): void
         {
@@ -666,11 +591,7 @@ namespace Temant\AuthManager {
          *
          * @param string $firstName The first name of the user.
          * @param string $lastName The last name of the user.
-         * @return string The generated unique username.
-         *
-         * @author Emad Almahdi
-         * @version 3.0.0
-         * @since 2024-02-08 
+         * @return string The generated unique username. 
          * @example generateUserName('John', 'Doe') // Returns 'John.D1' if 'John.D' already exists.
          */
         private function generateUserName(string $firstName, string $lastName): string
@@ -709,10 +630,6 @@ namespace Temant\AuthManager {
          *
          * @return ?User Returns a User entity object containing the logged-in user's information if authentication is verified,
          *                   otherwise returns null if the user is not authenticated or the user ID does not correspond to an existing record.
-         *
-         * @author Emad Almahdi
-         * @version 3.0.0
-         * @since 2024-02-08
          * @see User For the structure of the User entity.
          * @see isAuthenticated() To check the user's authentication status.
          */
@@ -739,10 +656,6 @@ namespace Temant\AuthManager {
          *
          * @param User $user The user entity whose password is being updated.
          * @param string $newPassword The new password chosen by the user, to be hashed and stored.
-         *
-         * @author Emad Almahdi
-         * @version 3.0.0
-         * @since 2024-02-08
          */
         private function changePassword(User $user, string $newPassword): void
         {
@@ -757,10 +670,6 @@ namespace Temant\AuthManager {
          *
          * @param string $password The plaintext password to be hashed.
          * @return string The securely hashed password, suitable for storage in the database.
-         *
-         * @author Emad Almahdi
-         * @version 3.0.0
-         * @since 2024-02-08
          */
         public function hashPassword(string $password): string
         {
@@ -776,10 +685,6 @@ namespace Temant\AuthManager {
          * @param User $user The user entity whose password is being verified.
          * @param string $password The plaintext password provided by the user for verification.
          * @return bool True if the plaintext password matches the stored hashed password, false otherwise.
-         *
-         * @author Emad Almahdi
-         * @version 3.0.0
-         * @since 2024-02-08
          */
         private function verifyPassword(User $user, string $password): bool
         {

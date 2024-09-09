@@ -16,7 +16,7 @@ namespace Temant\AuthManager\Config {
         /**
          * Get a configuration value by key.
          *
-         * @param string $key   The key of the configuration value. 
+         * @param string $key The key of the configuration value. 
          */
         public function get(string $key): mixed;
 
@@ -37,24 +37,24 @@ namespace Temant\AuthManager\Config {
         /**
          * Set a configuration value.
          *
-         * @param string $key   The key for the configuration value.
+         * @param string $key The key for the configuration value.
          * @param string $value The value to set for the configuration.
-         * @return bool         True on successful setting, false if there was an issue.
+         * @return bool True on successful setting, false if there was an issue.
          */
         public function set(string $key, string $value): bool;
 
         /**
          * Check if a configuration key exists.
          *
-         * @param string $key   The key to check for existence.
-         * @return bool         True if the key exists, false otherwise.
+         * @param string $key The key to check for existence.
+         * @return bool True if the key exists, false otherwise.
          */
         public function has(string $key): bool;
 
         /**
          * Get all configuration values as an array.
          *
-         * @return array        An associative array of all configuration key-value pairs.
+         * @return array An associative array of all configuration key-value pairs.
          */
         public function all(): array;
     }
