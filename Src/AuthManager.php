@@ -1,6 +1,7 @@
 <?php declare(strict_types=1);
 
 namespace Temant\AuthManager {
+
     use DateTime;
     use DateTimeInterface;
     use Doctrine\ORM\EntityManager;
@@ -25,7 +26,7 @@ namespace Temant\AuthManager {
          * thereby reducing vulnerability to brute force attacks.
          * Choose a value based on the application's performance and security requirements.
          */
-        private const PASSWORD_COST = 12;
+        private const int PASSWORD_COST = 12;
 
         /**
          * @param SessionManagerInterface $session
@@ -97,7 +98,7 @@ namespace Temant\AuthManager {
                 $this->sendEmailVerification($newUser, $selector, $validator);
             }
 
-            return $this->entityManager->getRepository(User::Class)->find($newUser);
+            return $this->entityManager->getRepository(User::class)->find($newUser);
         }
 
         /**
