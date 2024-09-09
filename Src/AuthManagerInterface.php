@@ -18,10 +18,9 @@ namespace Temant\AuthManager {
          * @param int $roleId The role ID of the new user.
          * @param string $email The email address of the user.
          * @param string $password The password of the user.
-         * @return bool Returns true if the user is successfully registered, false otherwise.
-         *              for the provided data or an issue with inserting the new record into the database.
+         * @return User
          */
-        public function registerUser(string $firstName, string $lastName, int $role, string $email, string $password): bool;
+        public function registerUser(string $firstName, string $lastName, int $role, string $email, string $password): User;
 
         /**
          * Removes a specified user entity from the database. This method is responsible for deleting the user record

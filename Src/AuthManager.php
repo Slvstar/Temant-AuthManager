@@ -50,8 +50,7 @@ namespace Temant\AuthManager {
          * @param int $roleId The role ID of the new user.
          * @param string $email The email address of the user.
          * @param string $password The password of the user.
-         * @return bool Returns true if the user is successfully registered, false otherwise.
-         *              for the provided data or an issue with inserting the new record into the database.
+         * @return User
          *
          * @throws RoleNotFoundException When the specified user role ID is not found in the database.
          * @throws WeakPasswordException If the password is not matching the recommended settings
@@ -61,7 +60,7 @@ namespace Temant\AuthManager {
          * @version 3.0.0
          * @since 2024-02-08
          */
-        public function registerUser(string $firstName, string $lastName, int $roleId, string $email, string $password): bool
+        public function registerUser(string $firstName, string $lastName, int $roleId, string $email, string $password): User
         {
             // Generate a username based on the provided first and last name
             $username = $this->generateUserName($firstName, $lastName);
@@ -98,7 +97,7 @@ namespace Temant\AuthManager {
                 $this->sendEmailVerification($newUser, $selector, $validator);
             }
 
-            return true;
+            return $this->entityManager->getRepository(User::Class)->find($newUser);
         }
 
         /**
