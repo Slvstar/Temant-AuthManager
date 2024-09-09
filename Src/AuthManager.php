@@ -7,6 +7,7 @@ namespace Temant\AuthManager {
     use Doctrine\ORM\EntityManager;
     use Temant\AuthManager\Config\ConfigManagerInterface;
     use Temant\AuthManager\Entity\Attempt;
+    use Temant\AuthManager\Entity\Config;
     use Temant\AuthManager\Entity\Role;
     use Temant\AuthManager\Entity\Token;
     use Temant\AuthManager\Entity\User;

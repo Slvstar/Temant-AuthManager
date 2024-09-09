@@ -2,13 +2,13 @@
 
 namespace Temant\AuthManager\Utils {
 
-    use Temant\AuthManager\Entity\Role;
     use Doctrine\ORM\EntityManager;
+    use Temant\AuthManager\Entity\Role;
     use Temant\AuthManager\Exceptions\EmailNotValidException;
     use Temant\AuthManager\Exceptions\RoleNotFoundException;
     use Temant\AuthManager\Exceptions\WeakPasswordException;
 
-    class Validator
+    final class Validator
     {
         /**
          * Validate role ID and return the role entity.
@@ -43,7 +43,7 @@ namespace Temant\AuthManager\Utils {
          * Validate password strength and requirements.
          *
          * @param string $password
-         * @param array $config
+         * @param array<string, null|bool|int> $config Configuration options (key-value pairs).
          * @return string
          * @throws WeakPasswordException
          */
