@@ -1,6 +1,7 @@
 <?php declare(strict_types=1);
 
 namespace Temant\AuthManager\Entity {
+    
     use DateTime;
     use DateTimeInterface;
     use Doctrine\ORM\Mapping\Column;
