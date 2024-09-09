@@ -18,7 +18,7 @@ namespace Temant\AuthManager {
          * @param int $roleId The role ID of the new user.
          * @param string $email The email address of the user.
          * @param string $password The password of the user.
-         * @return User
+         * @return User The newly register user Entity
          */
         public function registerUser(string $firstName, string $lastName, int $role, string $email, string $password): User;
 

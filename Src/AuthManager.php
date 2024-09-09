@@ -50,7 +50,7 @@ namespace Temant\AuthManager {
          * @param int $roleId The role ID of the new user.
          * @param string $email The email address of the user.
          * @param string $password The password of the user.
-         * @return User
+         * @return User The newly register user Entity
          *
          * @throws RoleNotFoundException When the specified user role ID is not found in the database.
          * @throws WeakPasswordException If the password is not matching the recommended settings
