@@ -22,5 +22,8 @@
         "phpunit/phpunit": "^11.3",
         "symfony/var-dumper": "^7.1",
         "phpstan/phpstan": "^1.12"
+    },
+    "scripts": {
+        "analyse": "./vendor/bin/phpstan"
     }
 }
