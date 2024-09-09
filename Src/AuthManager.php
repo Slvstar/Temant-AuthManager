@@ -15,6 +15,7 @@ namespace Temant\AuthManager {
     use Temant\AuthManager\Exceptions\UsernameIncrementException;
     use Temant\AuthManager\Exceptions\WeakPasswordException;
     use Temant\AuthManager\Utils\Utils;
+    use Temant\AuthManager\Utils\Validator;
     use Temant\CookieManager\CookieManager;
     use Temant\SessionManager\SessionManagerInterface;
 
@@ -68,24 +69,24 @@ namespace Temant\AuthManager {
             $username = $this->generateUserName($firstName, $lastName);
 
             // Password validation checks
-            $validatedPassword = $this->validatePassword($password);
-
-            // Role ID validation checks
-            $validatedRole = $this->validateRole($roleId);
-
-            // Email validation checks
-            $validatedEmail = $this->validateEmail($email);
+            $validatedPassword = Validator::validatePassword($password, [
+                'min_length' => $this->configManager->get('password_min_length'),
+                'require_uppercase' => $this->configManager->getBoolean('password_require_uppercase'),
+                'require_lowercase' => $this->configManager->getBoolean('password_require_lowercase'),
+                'require_numeric' => $this->configManager->getBoolean('password_require_numeric'),
+                'require_special' => $this->configManager->getBoolean('password_require_special')
+            ]);
 
             // Create a new User entity and set its properties
             $newUser = (new User)
                 ->setUserName($username)
                 ->setFirstName($firstName)
                 ->setLastName($lastName)
-                ->setEmail($validatedEmail)
-                ->setPassword($validatedPassword)
+                ->setEmail(Validator::validateEmail($email))
+                ->setPassword($this->hashPassword($validatedPassword))
                 ->setIsActivated(false)
                 ->setIsLocked(false)
-                ->setRole($validatedRole);
+                ->setRole(Validator::validateRole($this->entityManager, $roleId));
 
             // Persist the new User entity to the database
             $this->entityManager->persist($newUser);
@@ -114,93 +115,6 @@ namespace Temant\AuthManager {
         {
             $this->entityManager->remove($user);
             $this->entityManager->flush();
-        }
-
-        /**
-         * Validates a role against the configured role requirements.
-         *
-         * @param int $roleId The role ID to validate.
-         * @return Role The validated Role Entity
-         * @throws RoleNotFoundException When the specified user role ID is not found in the database.
-         */
-        private function validateRole(int $roleId): Role
-        {
-            // Retrieve the desired Role entity from the database
-            $roleEntity = $this->entityManager->getRepository(Role::class)->find($roleId);
-
-            // Throw an exception if the specified user role is not found
-            if (!$roleEntity) {
-                throw new RoleNotFoundException;
-            }
-
-            // Set the Role on the new User entity
-            return $roleEntity;
-        }
-
-        /**
-         * Validates an email against the configured email requirements.
-         *
-         * @param string $email Email to validate.
-         * @throws EmailNotValidException When the Email is not a valid email address 
-         */
-        private function validateEmail(string $email): string
-        {
-            if (filter_var($email, FILTER_VALIDATE_EMAIL)) {
-                return $email;
-            }
-            throw new EmailNotValidException;
-        }
-
-        /**
-         * Validates a password against the configured password requirements.
-         *
-         * @param string $password The password to validate.
-         * @return string The securely hashed password, suitable for storage in the database.
-         * 
-         * @throws WeakPasswordException If the password is not matching the recommended settings
-         *
-         * @author Emad Almahdi
-         * @version 3.0.0
-         * @since 2024-02-08
-         */
-        private function validatePassword(string $password): string
-        {
-            // Check minimum length requirem
-            if (!is_null($this->configManager->get('password_min_length'))) {
-                if (strlen($password) < $this->configManager->getInteger('password_min_length')) {
-                    throw new WeakPasswordException("The password is so short");
-                }
-            }
-
-            // Check if uppercase letter is required
-            if (!is_null($this->configManager->get('password_require_uppercase'))) {
-                if ($this->configManager->getBoolean('password_require_uppercase') && !preg_match('/[A-Z]/', $password)) {
-                    throw new WeakPasswordException("The password must contain at least one uppercase char");
-                }
-            }
-
-            // Check if lowercase letter is required
-            if (!is_null($this->configManager->get('password_require_lowercase'))) {
-                if ($this->configManager->getBoolean('password_require_lowercase') && !preg_match('/[a-z]/', $password)) {
-                    throw new WeakPasswordException("The password must contain at least one lowercase char");
-                }
-            }
-
-            // Check if numeric digit is required
-            if (!is_null($this->configManager->get('password_require_numeric'))) {
-                if ($this->configManager->getBoolean('password_require_numeric') && !preg_match('/\d/', $password)) {
-                    throw new WeakPasswordException("The password must contain at least one numeric char");
-                }
-            }
-
-            // Check if special character is required
-            if (!is_null($this->configManager->get('password_require_special'))) {
-                if ($this->configManager->getBoolean('password_require_special') && !preg_match('/[^a-zA-Z\d]/', $password)) {
-                    throw new WeakPasswordException("The password must contain a special char");
-                }
-            }
-
-            return $this->hashPassword($password);
         }
 
         /**
@@ -283,10 +197,6 @@ namespace Temant\AuthManager {
          *
          * @param User $user The user entity for whom the "remember me" token is being generated and remembered.
          * @return void
-         * 
-         * @author Emad Almahdi
-         * @version 3.0.0
-         * @since 2024-02-08
          */
         private function rememberUser(User $user): void
         {
@@ -324,8 +234,8 @@ namespace Temant\AuthManager {
             $timePeriod = $timePeriod ?? new DateTime();
 
             return $user->getAttempts()
-                ->filter(fn(Attempt $attempt): bool =>
-                    !$attempt->getSuccess() && $attempt->getCreatedAt() >= $timePeriod)
+                ->filter(fn(Attempt $attempt): bool
+                    => !$attempt->getSuccess() && $attempt->getCreatedAt() >= $timePeriod)
                 ->count();
         }
 
@@ -378,20 +288,15 @@ namespace Temant\AuthManager {
         }
 
         /**
-         * Determines the outcome of the most recent authentication attempt made by a given user. This method is useful
-         * for understanding a user's last interaction with the authentication system, such as for displaying messages
-         * related to their last login attempt or for audit purposes.
+         * Retrieves the success status of a user's most recent authentication attempt.
+         * Useful for user feedback and audit trails.
          *
-         * @param User $user The user entity whose last authentication attempt is being queried.
-         * @return bool|null True if the last attempt was successful, false if it was unsuccessful, or null if there are no recorded attempts for the user.
+         * @param User $user The user to check.
+         * @return bool|null True if the last attempt was successful, false if unsuccessful, or null if no attempts exist.
          */
         public function getLastAuthenticationStatus(User $user): ?bool
         {
-            // Retrieve the most recent authentication attempt made by the user
-            $lastAttempt = $user->getAttempts()->last();
-
-            // Determine the success status of the last attempt, if it exists
-            return $lastAttempt?->getSuccess();
+            return $user->getAttempts()->last()?->getSuccess();
         }
 
         /**
@@ -428,9 +333,6 @@ namespace Temant\AuthManager {
          *
          * @param User $user The successfully authenticated user entity.
          * @param bool $remember If true, sets up "remember me" functionality for the user session.
-         * @author Emad Almahdi
-         * @version 3.0.0
-         * @since 2024-02-08
          */
         private function finalizeAuthentication(User $user, bool $remember = false): void
         {
@@ -599,12 +501,12 @@ namespace Temant\AuthManager {
             $usernameBase = sprintf('%s.%s', ucfirst($firstName), ucfirst(substr($lastName, 0, 1)));
 
             // Retrieve users with usernames starting with the base username
-            $existingUsernames = array_map(fn(User $user): string =>
-                $user->getUserName(), $this->entityManager->getRepository(User::class)->findAll());
+            $existingUsernames = array_map(fn(User $user): string
+                => $user->getUserName(), $this->entityManager->getRepository(User::class)->findAll());
 
             // Filter usernames to find those that match the pattern
-            $matchingUsernames = array_filter($existingUsernames, fn($username): bool =>
-                str_starts_with($username, $usernameBase));
+            $matchingUsernames = array_filter($existingUsernames, fn(string $username): bool
+                => str_starts_with($username, $usernameBase));
 
             // Count matching usernames to determine the new username's suffix
             $countMatchingUsernames = count($matchingUsernames);
@@ -612,7 +514,9 @@ namespace Temant\AuthManager {
             // If there are matching usernames, append the count + 1 to the base username
             if ($countMatchingUsernames > 0) {
                 if (!$this->configManager->getBoolean('allow_username_increment')) {
-                    throw new UsernameIncrementException("Username increments are not allowed according to the current configuration settings.");
+                    throw new UsernameIncrementException(
+                        sprintf("Incremented usernames are not permitted. Unable to create a unique username based on '%s'.", $usernameBase)
+                    );
                 }
                 return $usernameBase . ($countMatchingUsernames + 1);
             }
