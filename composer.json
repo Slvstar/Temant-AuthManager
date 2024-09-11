@@ -13,6 +13,7 @@
     },
     "require": {
         "temant/cookie-manager": "^5.0",
+        "temant/settings-manager": "^1.0",
         "temant/session-manager": "^2.0",
         "doctrine/orm": "^3.1",
         "doctrine/dbal": "^4.1",
