@@ -5,7 +5,6 @@ namespace Temant\AuthManager {
     use DateTime;
     use DateTimeInterface;
     use Doctrine\ORM\EntityManager;
-    use Temant\AuthManager\Config\ConfigManagerInterface;
     use Temant\AuthManager\Entity\Attempt;
     use Temant\AuthManager\Entity\Role;
     use Temant\AuthManager\Entity\Token;
@@ -18,6 +17,7 @@ namespace Temant\AuthManager {
     use Temant\AuthManager\Utils\Validator;
     use Temant\CookieManager\CookieManager;
     use Temant\SessionManager\SessionManagerInterface;
+    use Temant\SettingsManager\SettingsManager;
 
     final class AuthManager implements AuthManagerInterface
     {
@@ -29,20 +29,21 @@ namespace Temant\AuthManager {
          */
         private const int PASSWORD_COST = 12;
 
+        private SettingsManager $settingsManager;
+
         /**
          * Constructor for initializing dependencies in the authentication manager.
          * 
          * @param EntityManager $entityManager EntityManager for handling database operations.
          * @param SessionManagerInterface $sessionManagerInterface Manages user sessions and session data.
-         * @param ConfigManagerInterface $configManager Handles the configuration settings required for the authentication process.
          * @param TokenManager $tokenManager Manages token generation, validation, and renewal.
          */
         public function __construct(
             private readonly EntityManager $entityManager,
             private readonly SessionManagerInterface $sessionManagerInterface,
-            private readonly ConfigManagerInterface $configManager,
             private readonly TokenManager $tokenManager
         ) {
+            $this->settingsManager = new SettingsManager($entityManager, "authentication_settings");
         }
 
         /**
@@ -70,11 +71,11 @@ namespace Temant\AuthManager {
 
             // Password validation checks
             $validatedPassword = Validator::validatePassword($password, [
-                'min_length' => $this->configManager->get('password_min_length'),
-                'require_uppercase' => $this->configManager->getBoolean('password_require_uppercase'),
-                'require_lowercase' => $this->configManager->getBoolean('password_require_lowercase'),
-                'require_numeric' => $this->configManager->getBoolean('password_require_numeric'),
-                'require_special' => $this->configManager->getBoolean('password_require_special')
+                'min_length' => $this->getSetting('password_min_length'),
+                'require_uppercase' => $this->getSetting('password_require_uppercase'),
+                'require_lowercase' => $this->getSetting('password_require_lowercase'),
+                'require_numeric' => $this->getSetting('password_require_numeric'),
+                'require_special' => $this->getSetting('password_require_special')
             ]);
 
             // Create a new User entity and set its properties
@@ -93,10 +94,10 @@ namespace Temant\AuthManager {
             $this->entityManager->flush();
 
             // Additional logic for email verification, if enabled
-            if ($this->configManager->get('mail_verify') === 'enabled') {
+            if ($this->getSetting('mail_verify') === 'enabled') {
                 [$selector, $validator] = $this->tokenManager->generateToken();
 
-                $this->tokenManager->saveToken($newUser, 'email_activation', $selector, $validator, $this->configManager->getInteger('mail_activation_token_lifetime'));
+                $this->tokenManager->saveToken($newUser, 'email_activation', $selector, $validator, $this->getSetting('mail_activation_token_lifetime'));
                 $this->sendEmailVerification($newUser, $selector, $validator);
             }
 
@@ -207,8 +208,8 @@ namespace Temant\AuthManager {
             [$selector, $validator, $token] = $this->tokenManager->generateToken();
 
             // Retrieve configuration for 'remember_me' token lifetime and cookie name
-            $tokenLifetimeDays = $this->configManager->getInteger('remember_me_token_lifetime');
-            $cookieName = $this->configManager->get('remember_me_cookie_name');
+            $tokenLifetimeDays = $this->getSetting('remember_me_token_lifetime');
+            $cookieName = $this->getSetting('remember_me_cookie_name');
 
             // Calculate the cookie's expiration time based on the token's lifetime
             $cookieExpiry = time() + 60 * 60 * 24 * $tokenLifetimeDays;
@@ -217,7 +218,7 @@ namespace Temant\AuthManager {
             $this->tokenManager->saveToken($user, 'remember_me', $selector, $validator, $tokenLifetimeDays);
 
             // Set the 'remember_me' cookie in the user's browser with the generated token
-            CookieManager::set($cookieName, $token, $cookieExpiry);
+            CookieManager::set($cookieName, $token, (int) $cookieExpiry);
         }
 
         /**
@@ -251,7 +252,7 @@ namespace Temant\AuthManager {
         public function deauthenticate(): bool
         {
             $loggedInUser = $this->getLoggedInUser();
-            $rememberMeCookieName = $this->configManager->get('remember_me_cookie_name');
+            $rememberMeCookieName = $this->getSetting('remember_me_cookie_name');
 
             // Remove "remember me" tokens for the logged-in user, if any
             if ($loggedInUser) {
@@ -315,7 +316,7 @@ namespace Temant\AuthManager {
             }
 
             // Attempt to authenticate using a "remember-me" token, if present
-            $token = filter_input(INPUT_COOKIE, $this->configManager->get('remember_me_cookie_name'), FILTER_SANITIZE_FULL_SPECIAL_CHARS);
+            $token = filter_input(INPUT_COOKIE, $this->getSetting('remember_me_cookie_name'), FILTER_SANITIZE_FULL_SPECIAL_CHARS);
             if ($token && $this->tokenManager->isValid($token)) {
                 if ($user = $this->findUserByToken($token)) {
                     $this->finalizeAuthentication($user);
@@ -513,7 +514,7 @@ namespace Temant\AuthManager {
 
             // If there are matching usernames, append the count + 1 to the base username
             if ($countMatchingUsernames > 0) {
-                if (!$this->configManager->getBoolean('allow_username_increment')) {
+                if (!$this->getSetting('allow_username_increment')) {
                     throw new UsernameIncrementException(
                         sprintf("Incremented usernames are not permitted. Unable to create a unique username based on '%s'.", $usernameBase)
                     );
@@ -645,6 +646,11 @@ namespace Temant\AuthManager {
         public function listAllRoles(): array
         {
             return $this->entityManager->getRepository(Role::class)->findAll();
+        }
+
+        private function getSetting(string $key): mixed
+        {
+            return $this->settingsManager->get($key)?->getValue();
         }
     }
 }

@@ -3,7 +3,6 @@ use Doctrine\DBAL\DriverManager;
 use Doctrine\ORM\EntityManager;
 use Doctrine\ORM\ORMSetup;
 use Temant\AuthManager\AuthManager;
-use Temant\AuthManager\Config\ConfigManager;
 use Temant\AuthManager\Entity\User;
 use Temant\AuthManager\TokenManager;
 use Temant\SessionManager\SessionManager;
@@ -29,11 +28,10 @@ $connection = DriverManager::getConnection([
 // obtaining the entity manager
 $entityManager = new EntityManager($connection, $config);
 
-$configManager = new ConfigManager($entityManager);
 $sessionManager = new SessionManager();
 $tokenManager = new TokenManager($entityManager);
 
-$authManager = new AuthManager($entityManager, $sessionManager, $configManager, $tokenManager);
+$authManager = new AuthManager($entityManager, $sessionManager, $tokenManager);
 
 $user = $authManager->registerUser('Emad', 'Almahdi', 1, 'emad.storm@gmail.com', "12345");
 
