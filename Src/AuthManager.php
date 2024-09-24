@@ -571,15 +571,15 @@ namespace Temant\AuthManager {
             return $this->settingsManager->get($key)?->getValue();
         }
 
-
-
-
-
-
-
-
-
-
+        /**
+         * Lists all system settings.
+         * 
+         * @return array An array of all settings.
+         */
+        public function listSetting(): array
+        {
+            return $this->settingsManager->all();
+        }
 
         /**
          * Generates a password reset token and triggers an email callback.
