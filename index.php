@@ -29,9 +29,8 @@ $connection = DriverManager::getConnection([
 $entityManager = new EntityManager($connection, $config);
 
 $sessionManager = new SessionManager();
-$tokenManager = new TokenManager($entityManager);
 
-$authManager = new AuthManager($entityManager, $sessionManager, $tokenManager);
+$authManager = new AuthManager($entityManager, $sessionManager);
 
 $user = $authManager->registerUser('Emad', 'Almahdi', 1, 'emad.storm@gmail.com', "12345");
 
