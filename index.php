@@ -30,9 +30,43 @@ $entityManager = new EntityManager($connection, $config);
 
 $sessionManager = new SessionManager();
 
+$sessionManager->start();
+
 $authManager = new AuthManager($entityManager, $sessionManager);
 
-$user = $authManager->registerUser('Emad', 'Almahdi', 1, 'emad.storm@gmail.com', "12345");
+
+
+
+$emailCallback = function (User $user, string $selector, string $validator) {
+    $resetLink = "https://{$_SERVER['HTTP_HOST']}/reset-password.php?selector=$selector&validator=$validator";
+    $email = $user->getEmail();
+    $subject = 'Password Reset Request';
+
+    $message = <<<MESSAGE
+        Hi {$user->getFirstName()},
+        
+        We received a request to reset your password. You can reset it by clicking the link below:
+        $resetLink
+        
+        If you did not request this, please ignore this email.
+    MESSAGE;
+
+    // Send the email using PHP's mail() or any other mailing service
+    return mail($email, $subject, nl2br($message), "From:no-reply@yourwebsite.com");
+};
+
+$user = $authManager->getUserByUsername('Emad.A29');
+$authManager->requestPasswordReset($user, $emailCallback);
+
+
+
+
+
+
+
+
+
+dd($authManager->authenticate('Emad.A29', '123'));
 
 if ($user) {
     dd($user);
@@ -40,9 +74,6 @@ if ($user) {
 } else {
     dd("Registration failed.");
 }
-
-
-$emad = $entityManager->getRepository(User::class)->find(1);
 
 
 dd($emad->hasPermission('View Dashboard'));

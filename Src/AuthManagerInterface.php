@@ -42,16 +42,13 @@ namespace Temant\AuthManager {
         public function removeUser(User $user): void;
 
         /**
-         * Sends an email to the user for email verification.
-         * This method typically sends an activation link to the user's email address
-         * containing the necessary parameters for account activation.
+         * Verifies a user's account using a token.
          *
-         * @param User $user The user object whose email address is to be verified.
-         * @param string $selector The token selector for email verification.
-         * @param string $validator The token validator for email verification.
-         * @return bool Returns true if the email is successfully sent, false otherwise.
+         * @param string $selector The token selector from the verification link.
+         * @param string $validator The token validator from the verification link.
+         * @return bool Returns true if the account is successfully verified, false otherwise.
          */
-        public function verifyEmail(User $user, string $selector, string $validator): bool;
+        public function verifyAccount(string $selector, string $validator): bool;
 
         /**
          * Authenticates a user by verifying their provided credentials against stored records.

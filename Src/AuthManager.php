@@ -106,11 +106,11 @@ namespace Temant\AuthManager {
             $this->entityManager->flush();
 
             // Additional logic for email verification, if enabled
-            if ($this->getSetting('mail_verify') === 'enabled') {
-                [$selector, $validator] = $this->tokenManager->generateToken();
+            if ($this->getSetting(key: 'mail_verify')) {
+                $tokenDto = $this->tokenManager->generateToken();
 
-                $this->tokenManager->saveToken($newUser, 'email_activation', $selector, $validator, $this->getSetting('mail_activation_token_lifetime'));
-                $this->sendEmailVerification($newUser, $selector, $validator);
+                $this->tokenManager->saveToken($newUser, 'email_activation', $tokenDto->selector, $tokenDto->hashedValidator, $this->getSetting('mail_activation_token_lifetime'));
+                $this->sendEmailVerification($newUser, $tokenDto->selector, $tokenDto->plainValidator);
             }
 
             return $this->entityManager->getRepository(User::class)->find($newUser);
@@ -125,32 +125,6 @@ namespace Temant\AuthManager {
         {
             $this->entityManager->remove($user);
             $this->entityManager->flush();
-        }
-
-        /**
-         * Sends a verification email to the user with a token for account activation.
-         * 
-         * @param User $user The user who needs email verification.
-         * @param string $selector The token selector.
-         * @param string $validator The token validator.
-         * @return bool Returns true if the email was sent successfully, false otherwise.
-         */
-        public function sendEmailVerification(User $user, string $selector, string $validator): bool
-        {
-            // Retrieve the user's email address
-            $email = $user->getEmail();
-
-            // Set email subject and body
-            $subject = 'Please activate your account';
-            $message = <<<MESSAGE
-                Hi,
-
-                Please click the following link to activate your account:
-                https://{$_SERVER['HTTP_HOST']}/activate-account.php?userId={$user->getUserName()}&selector=$selector&validator=$validator
-                MESSAGE;
-
-            // Send the email
-            return mail($email, $subject, nl2br($message), "From:no-reply@email.com");
         }
 
         /**
@@ -204,7 +178,7 @@ namespace Temant\AuthManager {
             $this->tokenManager->removeTokensForUserByType($user, 'remember_me');
 
             // Generate a new 'remember_me' token
-            [$selector, $validator, $token] = $this->tokenManager->generateToken();
+            $tokenDto = $this->tokenManager->generateToken();
 
             // Retrieve configuration for 'remember_me' token lifetime and cookie name
             $tokenLifetimeDays = $this->getSetting('remember_me_token_lifetime');
@@ -214,10 +188,10 @@ namespace Temant\AuthManager {
             $cookieExpiry = time() + 60 * 60 * 24 * $tokenLifetimeDays;
 
             // Persist the new token associated with the user in the database
-            $this->tokenManager->saveToken($user, 'remember_me', $selector, $validator, $tokenLifetimeDays);
+            $this->tokenManager->saveToken($user, 'remember_me', $tokenDto->selector, $tokenDto->hashedValidator, $tokenLifetimeDays);
 
             // Set the 'remember_me' cookie in the user's browser with the generated token
-            CookieManager::set($cookieName, $token, (int) $cookieExpiry);
+            CookieManager::set($cookieName, $tokenDto->token, (int) $cookieExpiry);
         }
 
         /**
@@ -556,19 +530,6 @@ namespace Temant\AuthManager {
         }
 
         /**
-         * Sends an email verification to the user.
-         * 
-         * @param User $user The user to verify.
-         * @param string $selector The token selector.
-         * @param string $validator The token validator.
-         * @return bool Returns true if the email was sent, false otherwise.
-         */
-        public function verifyEmail(User $user, string $selector, string $validator): bool
-        {
-            return true;
-        }
-
-        /**
          * Fetches a user by their username.
          * 
          * @param string $username The username to search for.
@@ -608,6 +569,119 @@ namespace Temant\AuthManager {
         private function getSetting(string $key): mixed
         {
             return $this->settingsManager->get($key)?->getValue();
+        }
+
+
+
+
+
+
+
+
+
+
+
+        /**
+         * Generates a password reset token and triggers an email callback.
+         *
+         * @param User $user The email of the user requesting the password reset.
+         * @param callable $emailCallback A callback function to send the reset email (e.g., sendEmail($user, $token)).
+         * @return bool Returns true if the reset token is generated and email sent, false otherwise.
+         */
+        public function requestPasswordReset(User $user, callable $emailCallback): bool
+        {
+            $user = $this->entityManager->getRepository(User::class)->find($user);
+
+            if (!$user) {
+                throw new EmailNotValidException("No user found with this email.");
+            }
+
+            // Generate new password reset token
+            $tokenDto = $this->tokenManager->generateToken();
+
+            // Save the reset token
+            $this->tokenManager->saveToken($user, 'password_reset', $tokenDto->selector, $tokenDto->hashedValidator, $this->getSetting('password_reset_token_lifetime'));
+
+            // Execute the email callback function
+            $emailCallback($user, $tokenDto->selector, $tokenDto->plainValidator);
+
+            return true;
+        }
+
+        /**
+         * Resets the user's password after verifying the token.
+         *
+         * @param string $selector The token selector from the reset link.
+         * @param string $validator The token validator from the reset link.
+         * @param string $newPassword The new password to be set.
+         * @return bool Returns true if the password is successfully reset, false otherwise.
+         */
+        public function resetPassword(string $selector, string $validator, string $newPassword): bool
+        {
+            $tokenEntity = $this->tokenManager->getTokenBySelector($selector);
+
+            if ($tokenEntity && $this->tokenManager->isValid("$selector:$validator")) {
+                $user = $tokenEntity->getUser();
+
+                // Update password
+                $this->changePassword($user, $newPassword);
+
+                // Remove the reset token
+                $this->tokenManager->removeTokensForUserByType($user, 'password_reset');
+
+                return true;
+            }
+
+            return false;
+        }
+
+        /**
+         * Verifies a user's account using a token.
+         *
+         * @param string $selector The token selector from the verification link.
+         * @param string $validator The token validator from the verification link.
+         * @return bool Returns true if the account is successfully verified, false otherwise.
+         */
+        public function verifyAccount(string $selector, string $validator): bool
+        {
+            $tokenEntity = $this->tokenManager->getTokenBySelector($selector);
+
+            if ($tokenEntity && $this->tokenManager->isValid("$selector:$validator")) {
+                $user = $tokenEntity->getUser();
+                $this->activateAccount($user);
+
+                // Remove token after successful verification
+                $this->tokenManager->removeToken($tokenEntity);
+                return true;
+            }
+
+            return false;
+        }
+
+        /**
+         * Sends a verification email to the user with a token for account activation.
+         * 
+         * @param User $user The user who needs email verification.
+         * @param string $selector The token selector.
+         * @param string $validator The token validator.
+         * @return bool Returns true if the email was sent successfully, false otherwise.
+         */
+        public function sendEmailVerification(User $user, string $selector, string $validator): bool
+        {
+            // Retrieve the user's email address
+            $email = $user->getEmail();
+
+            // Set email subject and body
+            $subject = 'Please activate your account';
+            $message = <<<MESSAGE
+                Hi,
+
+                Please click the following link to activate your account:
+                https://{$_SERVER['HTTP_HOST']}/activate-account.php?userId={$user->getUserName()}&selector=$selector&validator=$validator
+                MESSAGE;
+
+            // Send the email
+            return mail($email, $subject, nl2br($message), "From:no-reply@email.com");
         }
     }
 }

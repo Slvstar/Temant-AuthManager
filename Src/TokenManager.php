@@ -4,22 +4,23 @@ namespace Temant\AuthManager {
     use DateTime;
     use Doctrine\DBAL\Types\Types;
     use Doctrine\ORM\EntityManagerInterface;
+    use stdClass;
+    use Stringable;
     use Temant\AuthManager\Entity\Token;
     use Temant\AuthManager\Entity\User;
 
     /**
-     * Manages the lifecycle of authentication tokens including their creation, retrieval, validation, and deletion,
-     * leveraging Doctrine's EntityManager for database interactions.
+     * Manages authentication tokens for users.
      */
     class TokenManager
     {
         /**
          * @var int Specifies the bcrypt hash cost for token validation.
          */
-        public const int VALIDATOR_HASH_COST = 12;
+        public const VALIDATOR_HASH_COST = 12;
 
         /**
-         * Initializes the TokenManager and cleans up expired tokens.
+         * Constructor to initialize the TokenManager.
          *
          * @param EntityManagerInterface $entityManager Handles database operations for tokens.
          */
@@ -29,17 +30,18 @@ namespace Temant\AuthManager {
         }
 
         /**
-         * Generates a new secure authentication token with distinct selector and validator components.
+         * Generates a secure authentication token.
          *
-         * @return string[] Array containing the selector, hashed validator, and concatenated token string.
+         * @return TokenDto Contains the selector, hashed validator, and the full token string.
          */
-        public function generateToken(): array
+        public function generateToken(): TokenDto
         {
-            $selector = bin2hex(random_bytes(16));
-            $validator = bin2hex(random_bytes(32));
-            $hashedValidator = password_hash($validator, PASSWORD_DEFAULT, ['cost' => self::VALIDATOR_HASH_COST]);
+            $selector = bin2hex(random_bytes(16)); // 16 bytes selector
+            $plainValidator = bin2hex(random_bytes(32)); // 32 bytes plaintext validator
+            $hashedValidator = password_hash($plainValidator, PASSWORD_DEFAULT, ['cost' => self::VALIDATOR_HASH_COST]); // Hash the validator
 
-            return [$selector, $hashedValidator, "$selector:$validator"];
+            // Return a TokenRepresentation object with all the necessary fields
+            return new TokenDto($selector, $hashedValidator, $plainValidator);
         }
 
         /**
@@ -74,10 +76,10 @@ namespace Temant\AuthManager {
         }
 
         /**
-         * Parses a token string into selector and validator components.
+         * Parses a token string into selector and plain validator components.
          *
          * @param string $token The full token string.
-         * @return string[]|null Selector and validator if valid, otherwise null.
+         * @return string[]|null Selector and plain validator if valid, otherwise null.
          */
         public function parseToken(string $token): ?array
         {
@@ -86,23 +88,23 @@ namespace Temant\AuthManager {
         }
 
         /**
-         * Stores a token in the database with its expiration set.
+         * Saves a token for a user in the database.
          *
-         * @param User $user The associated user.
-         * @param string $type The token type.
-         * @param string $selector Token selector for quick lookup.
-         * @param string $validator Hashed validator for security.
-         * @param int $seconds Token lifespan in seconds.
-         * @return bool True if stored successfully.
+         * @param User $user The user to associate with the token.
+         * @param string $type Token type (e.g., 'password_reset', 'email_activation').
+         * @param string $selector The selector part of the token.
+         * @param string $hashedValidator The hashed validator part of the token.
+         * @param int $lifetime Token validity duration in seconds.
+         * @return bool True if the token is saved successfully.
          */
-        public function saveToken(User $user, string $type, string $selector, string $validator, int $seconds = 86400): bool
+        public function saveToken(User $user, string $type, string $selector, string $hashedValidator, int $lifetime): bool
         {
             $token = (new Token())
                 ->setUser($user)
                 ->setType($type)
                 ->setSelector($selector)
-                ->setValidator($validator)
-                ->setExpiresAt((new DateTime())->setTimestamp(time() + $seconds));
+                ->setValidator($hashedValidator)
+                ->setExpiresAt((new DateTime())->modify("+$lifetime seconds"));
 
             $this->entityManager->persist($token);
             $this->entityManager->flush();
@@ -111,19 +113,15 @@ namespace Temant\AuthManager {
         }
 
         /**
-         * Retrieves a token from the database using its selector.
-         * 
-         * This method allows for the quick lookup of a token based on its unique selector.
+         * Retrieves a token entity by its selector.
          *
-         * @param string $selector The selector part of the token used to retrieve it from the database.
-         * @return Token|null The Token entity if found, or null if no matching token is found.
+         * @param string $selector The token selector.
+         * @return Token|null The token entity if found, or null if not.
          */
         public function getTokenBySelector(string $selector): ?Token
         {
-            return $this->entityManager
-                ->getRepository(Token::class)
-                ->findOneBy(['selector' => $selector]);
-        }
+            return $this->entityManager->getRepository(Token::class)->findOneBy(['selector' => $selector]);
+        } 
 
         /**
          * Validates the authenticity and expiration of a token.
@@ -132,73 +130,75 @@ namespace Temant\AuthManager {
          * @return bool True if valid and active, otherwise false.
          */
         public function isValid(string $token): bool
-        {
+        { 
             [$selector, $validator] = $this->parseToken($token) ?? [null, null];
             if (!$selector || !$validator) {
                 return false;
             }
-            $tokenData = $this->getTokenBySelector($selector);
+            $tokenData = $this->getTokenBySelector($selector); 
 
-            return $tokenData &&
-                password_verify($validator, $tokenData->getValidator()) &&
-                !$this->hasTokenExpired($tokenData->getExpiresAt());
+
+            // Ensure the token exists and has not expired
+            if (!$tokenData || $this->hasTokenExpired($tokenData->getExpiresAt())) {
+                return false;
+            }
+
+            // Verify the validator part of the token
+            return password_verify($validator, $tokenData->getValidator());
         }
 
         /**
-         * Deletes all tokens for a user.
+         * Deletes a token from the database.
          *
-         * @param User $user The user whose tokens are to be deleted.
-         * @return int Number of tokens deleted.
+         * @param Token $token The token to remove.
          */
-        public function removeAllTokensForUser(User $user): int
+        public function removeToken(Token $token): void
         {
-            $count = 0;
-            $user->getTokens()->map(function (Token $token) use (&$count): void {
-                $this->entityManager->remove($token);
-                $count++;
-            });
-
+            $this->entityManager->remove($token);
             $this->entityManager->flush();
-
-            return $count;
         }
 
         /**
-         * Lists all tokens for a user.
+         * Cleans up expired tokens from the database.
          *
-         * @param User $user The user in question.
-         * @return Token[] Array of tokens.
-         */
-        public function listAllTokensForUser(User $user): array
-        {
-            return $user->getTokens()->toArray();
-        }
-
-        /**
-         * Checks if a token has expired.
-         *
-         * @param DateTime $expiryDate The expiry date of the token.
-         * @return bool True if expired, otherwise false.
-         */
-        private function hasTokenExpired(DateTime $expiryDate): bool
-        {
-            return $expiryDate < new DateTime();
-        }
-
-        /**
-         * Automatically removes expired tokens from the database.
-         *
-         * @return int Number of expired tokens deleted.
+         * @return int The number of tokens removed.
          */
         private function cleanupExpiredTokens(): int
         {
             return $this->entityManager
                 ->createQueryBuilder()
                 ->delete(Token::class, 't')
-                ->where('t.expiresAt < :currentDateTime')
-                ->setParameter('currentDateTime', new DateTime(), Types::DATETIME_MUTABLE)
+                ->where('t.expiresAt < :now')
+                ->setParameter('now', new DateTime(), Types::DATETIME_MUTABLE)
                 ->getQuery()
                 ->execute();
+        }
+
+        /**
+         * Checks whether a token has expired.
+         *
+         * @param DateTime $expiresAt The expiration date of the token.
+         * @return bool True if the token has expired, false otherwise.
+         */
+        private function hasTokenExpired(DateTime $expiresAt): bool
+        {
+            return $expiresAt < new DateTime();
+        }
+    }
+
+    /**
+     * Represents a secure token with both selector and validator.
+     */
+    final readonly class TokenDto
+    {
+        public string $token;
+
+        public function __construct(
+            public string $selector,
+            public string $hashedValidator,
+            public string $plainValidator
+        ) {
+            $this->token = sprintf("%s:%s", $this->selector, $this->plainValidator);
         }
     }
 }
