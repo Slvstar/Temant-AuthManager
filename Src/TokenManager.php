@@ -7,8 +7,8 @@ namespace Temant\AuthManager {
     use Doctrine\DBAL\Types\Types;
     use Doctrine\ORM\EntityManagerInterface;
     use Temant\AuthManager\Dto\TokenDto;
-    use Temant\AuthManager\Entity\Token;
-    use Temant\AuthManager\Entity\User;
+    use Temant\AuthManager\Entity\TokenEntity;
+    use Temant\AuthManager\Entity\UserEntity;
 
     /**
      * Manages authentication tokens for users.
@@ -48,24 +48,24 @@ namespace Temant\AuthManager {
         /**
          * Retrieves tokens for a user based on type (e.g., 'session', 'reset').
          *
-         * @param User $user The user whose tokens are being queried.
+         * @param UserEntity $user The user whose tokens are being queried.
          * @param string $type The type of tokens to retrieve.
-         * @return Token[] Array of associated Token entities.
+         * @return TokenEntity[] Array of associated Token entities.
          */
-        public function findByUserAndType(User $user, string $type): array
+        public function findByUserAndType(UserEntity $user, string $type): array
         {
-            return $this->entityManager->getRepository(Token::class)
+            return $this->entityManager->getRepository(TokenEntity::class)
                 ->findBy(['user' => $user, 'type' => $type]);
         }
 
         /**
          * Deletes tokens of a specified type for a user.
          *
-         * @param User $user The user whose tokens are to be deleted.
+         * @param UserEntity $user The user whose tokens are to be deleted.
          * @param string $type The type of tokens to delete.
          * @return int Number of tokens removed.
          */
-        public function removeTokensForUserByType(User $user, string $type): int
+        public function removeTokensForUserByType(UserEntity $user, string $type): int
         {
             $tokens = $this->findByUserAndType($user, $type);
             foreach ($tokens as $token) {
@@ -91,21 +91,21 @@ namespace Temant\AuthManager {
         /**
          * Saves a token for a user in the database.
          *
-         * @param User $user The user to associate with the token.
+         * @param UserEntity $user The user to associate with the token.
          * @param string $type Token type (e.g., 'password_reset', 'email_activation').
          * @param string $selector The selector part of the token.
          * @param string $hashedValidator The hashed validator part of the token.
          * @param int|DateTimeInterface $lifetime Token validity duration in seconds or a DateTimeInterface expiration.
          * @return bool True if the token is saved successfully.
          */
-        private function saveToken(User $user, string $type, string $selector, string $hashedValidator, int|DateTimeInterface $lifetime): bool
+        private function saveToken(UserEntity $user, string $type, string $selector, string $hashedValidator, int|DateTimeInterface $lifetime): bool
         {
             // Determine expiration time
             $expiresAt = $lifetime instanceof DateTimeInterface
                 ? $lifetime
                 : (new DateTime())->modify("+$lifetime seconds");
 
-            $token = (new Token())
+            $token = (new TokenEntity())
                 ->setUser($user)
                 ->setType($type)
                 ->setSelector($selector)
@@ -122,11 +122,11 @@ namespace Temant\AuthManager {
          * Retrieves a token entity by its selector.
          *
          * @param string $selector The token selector.
-         * @return Token|null The token entity if found, or null if not.
+         * @return TokenEntity|null The token entity if found, or null if not.
          */
-        public function getTokenBySelector(string $selector): ?Token
+        public function getTokenBySelector(string $selector): ?TokenEntity
         {
-            return $this->entityManager->getRepository(Token::class)->findOneBy(['selector' => $selector]);
+            return $this->entityManager->getRepository(TokenEntity::class)->findOneBy(['selector' => $selector]);
         }
 
         /**
@@ -155,9 +155,9 @@ namespace Temant\AuthManager {
         /**
          * Deletes a token from the database.
          *
-         * @param Token $token The token to remove.
+         * @param TokenEntity $token The token to remove.
          */
-        public function removeToken(Token $token): void
+        public function removeToken(TokenEntity $token): void
         {
             $this->entityManager->remove($token);
             $this->entityManager->flush();
@@ -172,7 +172,7 @@ namespace Temant\AuthManager {
         {
             return $this->entityManager
                 ->createQueryBuilder()
-                ->delete(Token::class, 't')
+                ->delete(TokenEntity::class, 't')
                 ->where('t.expiresAt < :now')
                 ->setParameter('now', new DateTime(), Types::DATETIME_MUTABLE)
                 ->getQuery()
@@ -182,12 +182,12 @@ namespace Temant\AuthManager {
         /**
          * Adds a token for a user and saves it in the database.
          *
-         * @param User $user The user to associate with the token.
+         * @param UserEntity $user The user to associate with the token.
          * @param string $type Token type (e.g., 'password_reset', 'email_activation').
          * @param int|DateTimeInterface $lifetime Token validity duration in seconds or a DateTimeInterface expiration.
          * @return false|TokenDto The TokenDto object containing token details, or false if saving failed.
          */
-        public function addToken(User $user, string $type, int|DateTimeInterface $lifetime): false|TokenDto
+        public function addToken(UserEntity $user, string $type, int|DateTimeInterface $lifetime): false|TokenDto
         {
             $tokenDto = $this->generateToken();
             if ($this->saveToken($user, $type, $tokenDto->selector, $tokenDto->hashedValidator, $lifetime)) {

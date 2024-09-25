@@ -12,15 +12,15 @@ namespace Temant\AuthManager\Entity {
 
     #[Entity]
     #[Table(name: "authentication_tokens")]
-    class Token
+    class TokenEntity
     {
         #[Id]
         #[GeneratedValue]
         #[Column(type: "integer")]
         private int $id;
 
-        #[ManyToOne(targetEntity: User::class, inversedBy: 'tokens')]
-        private User $user;
+        #[ManyToOne(targetEntity: UserEntity::class, inversedBy: 'tokens')]
+        private UserEntity $user;
 
         #[Column(type: "string", length: 32)]
         private string $selector;
@@ -102,12 +102,12 @@ namespace Temant\AuthManager\Entity {
             return $this;
         }
 
-        public function getUser(): User
+        public function getUser(): UserEntity
         {
             return $this->user;
         }
 
-        public function setUser(User $user): self
+        public function setUser(UserEntity $user): self
         {
             $this->user = $user;
             $user->addToken($this);

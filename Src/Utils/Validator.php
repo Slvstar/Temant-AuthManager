@@ -3,7 +3,7 @@
 namespace Temant\AuthManager\Utils {
 
     use Doctrine\ORM\EntityManager;
-    use Temant\AuthManager\Entity\Role;
+    use Temant\AuthManager\Entity\RoleEntity;
     use Temant\AuthManager\Exceptions\EmailNotValidException;
     use Temant\AuthManager\Exceptions\RoleNotFoundException;
     use Temant\AuthManager\Exceptions\WeakPasswordException;
@@ -15,12 +15,12 @@ namespace Temant\AuthManager\Utils {
          *
          * @param EntityManager $entityManager
          * @param int $roleId
-         * @return Role
+         * @return RoleEntity
          * @throws RoleNotFoundException
          */
-        public static function validateRole(EntityManager $entityManager, int $roleId): Role
+        public static function validateRole(EntityManager $entityManager, int $roleId): RoleEntity
         {
-            return $entityManager->getRepository(Role::class)->find($roleId)
+            return $entityManager->getRepository(RoleEntity::class)->find($roleId)
                 ?? throw new RoleNotFoundException("Role not found.");
         }
 

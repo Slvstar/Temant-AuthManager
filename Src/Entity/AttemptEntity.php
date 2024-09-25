@@ -20,8 +20,8 @@ namespace Temant\AuthManager\Entity {
         #[Column]
         private ?int $id = null;
 
-        #[ManyToOne(targetEntity: User::class, inversedBy: 'attempts')] 
-        private User $user;
+        #[ManyToOne(targetEntity: UserEntity::class, inversedBy: 'attempts')] 
+        private UserEntity $user;
 
         #[Column]
         private bool $success;
@@ -104,18 +104,18 @@ namespace Temant\AuthManager\Entity {
         }
 
         /**
-         * @return User
+         * @return UserEntity
          */
-        public function getUser(): User
+        public function getUser(): UserEntity
         {
             return $this->user;
         }
 
         /**
-         * @param User $user 
+         * @param UserEntity $user 
          * @return self
          */
-        public function setUser(User $user): self
+        public function setUser(UserEntity $user): self
         {
             $this->user = $user;
             return $this;

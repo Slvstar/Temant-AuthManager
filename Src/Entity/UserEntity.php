@@ -1,7 +1,7 @@
 <?php declare(strict_types=1);
 
 namespace Temant\AuthManager\Entity {
-    
+
     use DateTime;
     use DateTimeInterface;
     use Doctrine\Common\Collections\ArrayCollection;
@@ -17,7 +17,7 @@ namespace Temant\AuthManager\Entity {
 
     #[Entity]
     #[Table(name: 'authentication_users')]
-    class User
+    class UserEntity
     {
         #[Id]
         #[GeneratedValue]
@@ -48,10 +48,10 @@ namespace Temant\AuthManager\Entity {
         #[Column(name: 'created_at', type: "datetime")]
         private DateTimeInterface $createdAt;
 
-        #[ManyToOne(targetEntity: Role::class, inversedBy: "users")]
-        private ?Role $role = null;
+        #[ManyToOne(targetEntity: RoleEntity::class, inversedBy: "users")]
+        private ?RoleEntity $role = null;
 
-        #[OneToMany(targetEntity: Token::class, mappedBy: "user", cascade: ["persist", "remove"])]
+        #[OneToMany(targetEntity: TokenEntity::class, mappedBy: "user", cascade: ["persist", "remove"])]
         private Collection $tokens;
 
         #[OneToMany(targetEntity: AttemptEntity::class, mappedBy: "user", cascade: ["persist", "remove"])]
@@ -167,7 +167,7 @@ namespace Temant\AuthManager\Entity {
             return $this->tokens;
         }
 
-        public function addToken(Token $token): self
+        public function addToken(TokenEntity $token): self
         {
             if (!$this->tokens->contains($token)) {
                 $this->tokens[] = $token;
@@ -176,7 +176,7 @@ namespace Temant\AuthManager\Entity {
             return $this;
         }
 
-        public function removeToken(Token $token): bool
+        public function removeToken(TokenEntity $token): bool
         {
             return $this->tokens->removeElement($token);
         }
@@ -200,12 +200,12 @@ namespace Temant\AuthManager\Entity {
             return $this->attempts->removeElement($attempt);
         }
 
-        public function getRole(): ?Role
+        public function getRole(): ?RoleEntity
         {
             return $this->role;
         }
 
-        public function setRole(?Role $role): self
+        public function setRole(?RoleEntity $role): self
         {
             $this->role = $role;
             return $this;

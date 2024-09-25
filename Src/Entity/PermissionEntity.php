@@ -13,7 +13,7 @@ namespace Temant\AuthManager\Entity {
 
     #[Entity]
     #[Table(name: "authentication_permissions")]
-    class Permission
+    class PermissionEntity
     {
         #[Id]
         #[Column(name: "id")]
@@ -26,7 +26,7 @@ namespace Temant\AuthManager\Entity {
         #[Column(name: "description")]
         private string $description;
 
-        #[ManyToMany(targetEntity: Role::class, mappedBy: "permissions")]
+        #[ManyToMany(targetEntity: RoleEntity::class, mappedBy: "permissions")]
         private Collection $roles;
 
         public function __construct()
@@ -83,7 +83,7 @@ namespace Temant\AuthManager\Entity {
             return $this->roles;
         }
 
-        public function addRole(Role $role): self
+        public function addRole(RoleEntity $role): self
         {
             if (!$this->roles->contains($role)) {
                 $this->roles[] = $role;
@@ -92,7 +92,7 @@ namespace Temant\AuthManager\Entity {
             return $this;
         }
 
-        public function removeRole(Role $role): self
+        public function removeRole(RoleEntity $role): self
         {
             if ($this->roles->removeElement($role)) {
                 $role->removePermission($this);

@@ -7,9 +7,9 @@ namespace Temant\AuthManager {
     use DateTimeInterface;
     use Doctrine\ORM\EntityManager;
     use Temant\AuthManager\Entity\AttemptEntity;
-    use Temant\AuthManager\Entity\Role;
-    use Temant\AuthManager\Entity\Token;
-    use Temant\AuthManager\Entity\User;
+    use Temant\AuthManager\Entity\RoleEntity;
+    use Temant\AuthManager\Entity\TokenEntity;
+    use Temant\AuthManager\Entity\UserEntity;
     use Temant\AuthManager\Exceptions\EmailNotValidException;
     use Temant\AuthManager\Exceptions\RoleNotFoundException;
     use Temant\AuthManager\Exceptions\UsernameIncrementException;
@@ -71,13 +71,13 @@ namespace Temant\AuthManager {
          * @param string $email User's email address.
          * @param string $password User's chosen password.
          * 
-         * @return User|null Returns the registered User or null on failure.
+         * @return ?UserEntity Returns the registered User or null on failure.
          * 
          * @throws RoleNotFoundException If the role ID is invalid.
          * @throws WeakPasswordException If the password does not meet security requirements.
          * @throws EmailNotValidException If the email is invalid.
          */
-        public function registerUser(string $firstName, string $lastName, int $roleId, string $email, string $password): ?User
+        public function registerUser(string $firstName, string $lastName, int $roleId, string $email, string $password): ?UserEntity
         {
             // Generate a username based on the provided first and last name
             $username = $this->generateUserName($firstName, $lastName);
@@ -92,7 +92,7 @@ namespace Temant\AuthManager {
             ]);
 
             // Create a new User entity and set its properties
-            $newUser = (new User)
+            $newUser = (new UserEntity)
                 ->setUserName($username)
                 ->setFirstName($firstName)
                 ->setLastName($lastName)
@@ -113,15 +113,15 @@ namespace Temant\AuthManager {
                 $this->sendEmailVerification($newUser, $tokenDto->selector, $tokenDto->plainValidator);
             }
 
-            return $this->entityManager->getRepository(User::class)->find($newUser);
+            return $this->entityManager->getRepository(UserEntity::class)->find($newUser);
         }
 
         /**
          * Removes a user from the database.
          * 
-         * @param User $user The user entity to be deleted.
+         * @param UserEntity $user The user entity to be deleted.
          */
-        public function removeUser(User $user): void
+        public function removeUser(UserEntity $user): void
         {
             $this->entityManager->remove($user);
             $this->entityManager->flush();
@@ -139,9 +139,9 @@ namespace Temant\AuthManager {
         {
             // Retrieve the user entity based on the provided username
             if (filter_var($username, FILTER_VALIDATE_EMAIL)) {
-                $user = $this->entityManager->getRepository(User::class)->findOneBy(['email' => $username]);
+                $user = $this->entityManager->getRepository(UserEntity::class)->findOneBy(['email' => $username]);
             } else {
-                $user = $this->entityManager->getRepository(User::class)->findOneBy(['username' => $username]);
+                $user = $this->entityManager->getRepository(UserEntity::class)->findOneBy(['username' => $username]);
             }
 
             // Check if user exists
@@ -170,9 +170,9 @@ namespace Temant\AuthManager {
         /**
          * Enables "remember me" functionality by generating a token and setting a cookie.
          * 
-         * @param User $user The user to remember.
+         * @param UserEntity $user The user to remember.
          */
-        private function rememberUser(User $user): void
+        private function rememberUser(UserEntity $user): void
         {
             // Remove any existing 'remember_me' tokens for the user to prevent token buildup
             $this->tokenManager->removeTokensForUserByType($user, 'remember_me');
@@ -194,11 +194,11 @@ namespace Temant\AuthManager {
         /**
          * Counts failed login attempts by a user within a given time period.
          * 
-         * @param User $user The user whose attempts are being counted.
+         * @param UserEntity $user The user whose attempts are being counted.
          * @param DateTimeInterface|null $timePeriod The period from which to count.
          * @return int Number of failed attempts.
          */
-        public function countFailedAuthenticationAttempts(User $user, ?DateTimeInterface $timePeriod = null): int
+        public function countFailedAuthenticationAttempts(UserEntity $user, ?DateTimeInterface $timePeriod = null): int
         {
             $timePeriod = $timePeriod ?? new DateTime();
 
@@ -233,10 +233,10 @@ namespace Temant\AuthManager {
         /**
          * Deletes all authentication attempts for a given user.
          * 
-         * @param User $user The user whose attempts are deleted.
+         * @param UserEntity $user The user whose attempts are deleted.
          * @return bool Returns true if deletion was successful, false otherwise.
          */
-        public function deleteAuthenticationAttempts(User $user): bool
+        public function deleteAuthenticationAttempts(UserEntity $user): bool
         {
             $deleteCount = $this->entityManager
                 ->getRepository(AttemptEntity::class)
@@ -252,10 +252,10 @@ namespace Temant\AuthManager {
         /**
          * Checks the status of the user's last authentication attempt.
          * 
-         * @param User $user The user whose last attempt is checked.
+         * @param UserEntity $user The user whose last attempt is checked.
          * @return bool|null True if last attempt was successful, false if failed, null if no attempts exist.
          */
-        public function getLastAuthenticationStatus(User $user): ?bool
+        public function getLastAuthenticationStatus(UserEntity $user): ?bool
         {
             return $user->getAttempts()->last()?->getSuccess();
         }
@@ -287,10 +287,10 @@ namespace Temant\AuthManager {
         /**
          * Finalizes user authentication, setting the session and handling "remember me".
          * 
-         * @param User $user The user to finalize authentication for.
+         * @param UserEntity $user The user to finalize authentication for.
          * @param bool $remember If true, enables "remember me" functionality.
          */
-        private function finalizeAuthentication(User $user, bool $remember = false): void
+        private function finalizeAuthentication(UserEntity $user, bool $remember = false): void
         {
             // Regenerate the session to prevent session fixation attacks
             $this->sessionManagerInterface->regenerate();
@@ -310,15 +310,15 @@ namespace Temant\AuthManager {
          * Finds a user by a "remember me" token.
          * 
          * @param string $token The "remember me" token.
-         * @return ?User Returns the user if the token is valid, otherwise null.
+         * @return ?UserEntity Returns the user if the token is valid, otherwise null.
          */
-        private function findUserByToken(string $token): ?User
+        private function findUserByToken(string $token): ?UserEntity
         {
             // Attempt to parse the token to extract the selector component.
             [$selector] = $this->tokenManager->parseToken($token);
 
             // Find the token entity by its selector.
-            $tokenEntity = $this->entityManager->getRepository(Token::class)->findOneBy(['selector' => $selector]);
+            $tokenEntity = $this->entityManager->getRepository(TokenEntity::class)->findOneBy(['selector' => $selector]);
 
             // Return the associated User entity if the token is found, null otherwise.
             return $tokenEntity?->getUser();
@@ -327,10 +327,10 @@ namespace Temant\AuthManager {
         /**
          * Lists all authentication attempts for a user.
          * 
-         * @param User $user The user whose attempts are listed.
+         * @param UserEntity $user The user whose attempts are listed.
          * @return AttemptEntity[] Array of attempts.
          */
-        public function listAuthenticationAttempts(User $user): array
+        public function listAuthenticationAttempts(UserEntity $user): array
         {
             return $user->getAttempts()->toArray();
         }
@@ -338,14 +338,14 @@ namespace Temant\AuthManager {
         /**
          * Logs an authentication attempt with details such as success, IP address, and user agent.
          * 
-         * @param User $user The user being logged.
+         * @param UserEntity $user The user being logged.
          * @param bool $success True if the attempt was successful, false if not.
          * @param string|null $reason Optional reason for failure.
          * @param string|null $ipAddress Optional IP address, defaults to current IP.
          * @param string|null $userAgent Optional user agent, defaults to current user agent.
          * @return bool True if logged successfully, false otherwise.
          */
-        public function logAuthenticationAttempt(User $user, bool $success, ?string $reason = null, ?string $ipAddress = null, ?string $userAgent = null): bool
+        public function logAuthenticationAttempt(UserEntity $user, bool $success, ?string $reason = null, ?string $ipAddress = null, ?string $userAgent = null): bool
         {
             $attempt = (new AttemptEntity)
                 ->setUser($user)
@@ -363,9 +363,9 @@ namespace Temant\AuthManager {
         /**
          * Activates a user account, enabling access.
          * 
-         * @param User $user The user to activate.
+         * @param UserEntity $user The user to activate.
          */
-        public function activateAccount(User $user): void
+        public function activateAccount(UserEntity $user): void
         {
             $user->setIsActivated(true);
             $this->entityManager->flush();
@@ -374,9 +374,9 @@ namespace Temant\AuthManager {
         /**
          * Deactivates a user account, disabling access.
          * 
-         * @param User $user The user to deactivate.
+         * @param UserEntity $user The user to deactivate.
          */
-        public function deactivateAccount(User $user): void
+        public function deactivateAccount(UserEntity $user): void
         {
             $user->setIsActivated(false);
             $this->entityManager->flush();
@@ -385,10 +385,10 @@ namespace Temant\AuthManager {
         /**
          * Checks if a user's account is activated.
          * 
-         * @param User $user The user to check.
+         * @param UserEntity $user The user to check.
          * @return bool True if activated, false otherwise.
          */
-        public function isActivated(User $user): bool
+        public function isActivated(UserEntity $user): bool
         {
             return $user->getIsActivated();
         }
@@ -396,10 +396,10 @@ namespace Temant\AuthManager {
         /**
          * Checks if a user's account is locked.
          * 
-         * @param User $user The user to check.
+         * @param UserEntity $user The user to check.
          * @return bool True if locked, false otherwise.
          */
-        public function isLocked(User $user): bool
+        public function isLocked(UserEntity $user): bool
         {
             return $user->getIsLocked();
         }
@@ -407,9 +407,9 @@ namespace Temant\AuthManager {
         /**
          * Locks a user account, preventing login.
          * 
-         * @param User $user The user to lock.
+         * @param UserEntity $user The user to lock.
          */
-        public function lockAccount(User $user): void
+        public function lockAccount(UserEntity $user): void
         {
             $user->setIsLocked(true);
             $this->entityManager->flush();
@@ -418,9 +418,9 @@ namespace Temant\AuthManager {
         /**
          * Unlocks a user account, allowing login.
          * 
-         * @param User $user The user to unlock.
+         * @param UserEntity $user The user to unlock.
          */
-        public function unlockAccount(User $user): void
+        public function unlockAccount(UserEntity $user): void
         {
             $user->setIsLocked(false);
             $this->entityManager->flush();
@@ -439,8 +439,8 @@ namespace Temant\AuthManager {
             $usernameBase = sprintf('%s.%s', ucfirst($firstName), ucfirst(substr($lastName, 0, 1)));
 
             // Retrieve users with usernames starting with the base username
-            $existingUsernames = array_map(fn(User $user): string
-                => $user->getUserName(), $this->entityManager->getRepository(User::class)->findAll());
+            $existingUsernames = array_map(fn(UserEntity $user): string
+                => $user->getUserName(), $this->entityManager->getRepository(UserEntity::class)->findAll());
 
             // Filter usernames to find those that match the pattern
             $matchingUsernames = array_filter($existingUsernames, fn(string $username): bool
@@ -466,9 +466,9 @@ namespace Temant\AuthManager {
         /**
          * Fetches the currently logged-in user.
          * 
-         * @return ?User Returns the User if logged in, otherwise null.
+         * @return ?UserEntity Returns the User if logged in, otherwise null.
          */
-        public function getLoggedInUser(): ?User
+        public function getLoggedInUser(): ?UserEntity
         {
             // Check if the user is authenticated
             if (!$this->isAuthenticated()) {
@@ -480,17 +480,17 @@ namespace Temant\AuthManager {
 
             // Fetch and return the User entity associated with the logged-in user's ID
             return $this->entityManager
-                ->getRepository(User::class)
+                ->getRepository(UserEntity::class)
                 ->find($userId);
         }
 
         /**
          * Updates a user's password.
          * 
-         * @param User $user The user whose password is updated.
+         * @param UserEntity $user The user whose password is updated.
          * @param string $newPassword The new password to set.
          */
-        private function changePassword(User $user, string $newPassword): void
+        private function changePassword(UserEntity $user, string $newPassword): void
         {
             $user->setPassword($this->hashPassword($newPassword));
             $this->entityManager->flush();
@@ -510,11 +510,11 @@ namespace Temant\AuthManager {
         /**
          * Verifies a plaintext password against a stored hashed password.
          * 
-         * @param User $user The user whose password is being verified.
+         * @param UserEntity $user The user whose password is being verified.
          * @param string $password The plaintext password to verify.
          * @return bool True if the password is correct, false otherwise.
          */
-        private function verifyPassword(User $user, string $password): bool
+        private function verifyPassword(UserEntity $user, string $password): bool
         {
             $hashedPassword = $user->getPassword();
 
@@ -530,31 +530,31 @@ namespace Temant\AuthManager {
          * Fetches a user by their username.
          * 
          * @param string $username The username to search for.
-         * @return ?User The User entity, or null if not found.
+         * @return ?UserEntity The User entity, or null if not found.
          */
-        public function getUserByUsername(string $username): ?User
+        public function getUserByUsername(string $username): ?UserEntity
         {
-            return $this->entityManager->getRepository(User::class)->findOneBy(['username' => $username]);
+            return $this->entityManager->getRepository(UserEntity::class)->findOneBy(['username' => $username]);
         }
 
         /**
          * Lists all registered users.
          * 
-         * @return User[] Array of all User entities.
+         * @return UserEntity[] Array of all User entities.
          */
         public function listAllRegistredUsers(): array
         {
-            return $this->entityManager->getRepository(User::class)->findAll();
+            return $this->entityManager->getRepository(UserEntity::class)->findAll();
         }
 
         /**
          * Lists all roles in the system.
          * 
-         * @return Role[] Array of all Role entities.
+         * @return RoleEntity[] Array of all Role entities.
          */
         public function listAllRoles(): array
         {
-            return $this->entityManager->getRepository(Role::class)->findAll();
+            return $this->entityManager->getRepository(RoleEntity::class)->findAll();
         }
 
         /**
@@ -581,13 +581,13 @@ namespace Temant\AuthManager {
         /**
          * Generates a password reset token and triggers an email callback.
          *
-         * @param User $user The email of the user requesting the password reset.
+         * @param UserEntity $user The email of the user requesting the password reset.
          * @param callable $emailCallback A callback function to send the reset email (e.g., sendEmail($user, $token)).
          * @return bool Returns true if the reset token is generated and email sent, false otherwise.
          */
-        public function requestPasswordReset(User $user, callable $emailCallback): bool
+        public function requestPasswordReset(UserEntity $user, callable $emailCallback): bool
         {
-            $user = $this->entityManager->getRepository(User::class)->find($user);
+            $user = $this->entityManager->getRepository(UserEntity::class)->find($user);
 
             if (!$user) {
                 throw new EmailNotValidException("No user found with this email.");
@@ -655,12 +655,12 @@ namespace Temant\AuthManager {
         /**
          * Sends a verification email to the user with a token for account activation.
          * 
-         * @param User $user The user who needs email verification.
+         * @param UserEntity $user The user who needs email verification.
          * @param string $selector The token selector.
          * @param string $validator The token validator.
          * @return bool Returns true if the email was sent successfully, false otherwise.
          */
-        public function sendEmailVerification(User $user, string $selector, string $validator): bool
+        public function sendEmailVerification(UserEntity $user, string $selector, string $validator): bool
         {
             // Retrieve the user's email address
             $email = $user->getEmail();

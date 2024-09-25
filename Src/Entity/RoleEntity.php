@@ -15,7 +15,7 @@ namespace Temant\AuthManager\Entity {
 
     #[Entity]
     #[Table(name: "authentication_roles")]
-    class Role
+    class RoleEntity
     {
         #[Id]
         #[Column(name: "id")]
@@ -28,10 +28,10 @@ namespace Temant\AuthManager\Entity {
         #[Column(name: "description")]
         private string $description;
 
-        #[OneToMany(targetEntity: User::class, mappedBy: "role")]
+        #[OneToMany(targetEntity: UserEntity::class, mappedBy: "role")]
         private Collection $users;
 
-        #[ManyToMany(targetEntity: Permission::class, inversedBy: "roles")]
+        #[ManyToMany(targetEntity: PermissionEntity::class, inversedBy: "roles")]
         #[JoinTable(name: "authentication_role_permissions")]
         private Collection $permissions;
 
@@ -73,7 +73,7 @@ namespace Temant\AuthManager\Entity {
             return $this->users;
         }
 
-        public function addUser(User $user): self
+        public function addUser(UserEntity $user): self
         {
             if (!$this->users->contains($user)) {
                 $this->users[] = $user;
@@ -82,7 +82,7 @@ namespace Temant\AuthManager\Entity {
             return $this;
         }
 
-        public function removeUser(User $user): self
+        public function removeUser(UserEntity $user): self
         {
             if ($this->users->removeElement($user)) {
                 if ($user->getRole() === $this) {
@@ -97,7 +97,7 @@ namespace Temant\AuthManager\Entity {
             return $this->permissions;
         }
 
-        public function addPermission(Permission $permission): self
+        public function addPermission(PermissionEntity $permission): self
         {
             if (!$this->permissions->contains($permission)) {
                 $this->permissions[] = $permission;
@@ -106,7 +106,7 @@ namespace Temant\AuthManager\Entity {
             return $this;
         }
 
-        public function removePermission(Permission $permission): self
+        public function removePermission(PermissionEntity $permission): self
         {
             if ($this->permissions->removeElement($permission)) {
                 $permission->removeRole($this);
