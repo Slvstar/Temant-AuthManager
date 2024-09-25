@@ -54,7 +54,7 @@ namespace Temant\AuthManager\Entity {
         #[OneToMany(targetEntity: Token::class, mappedBy: "user", cascade: ["persist", "remove"])]
         private Collection $tokens;
 
-        #[OneToMany(targetEntity: Attempt::class, mappedBy: "user", cascade: ["persist", "remove"])]
+        #[OneToMany(targetEntity: AttemptEntity::class, mappedBy: "user", cascade: ["persist", "remove"])]
         private Collection $attempts;
 
         public function __construct()
@@ -186,7 +186,7 @@ namespace Temant\AuthManager\Entity {
             return $this->attempts;
         }
 
-        public function addAttempt(Attempt $attempt): self
+        public function addAttempt(AttemptEntity $attempt): self
         {
             if (!$this->attempts->contains($attempt)) {
                 $this->attempts[] = $attempt;
@@ -195,7 +195,7 @@ namespace Temant\AuthManager\Entity {
             return $this;
         }
 
-        public function removeAttempt(Attempt $attempt): bool
+        public function removeAttempt(AttemptEntity $attempt): bool
         {
             return $this->attempts->removeElement($attempt);
         }

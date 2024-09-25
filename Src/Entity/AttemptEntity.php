@@ -13,7 +13,7 @@ namespace Temant\AuthManager\Entity {
 
     #[Entity]
     #[Table(name: "authentication_attempts")]
-    class Attempt
+    class AttemptEntity
     {
         #[Id]
         #[GeneratedValue]

@@ -6,7 +6,7 @@ namespace Temant\AuthManager {
     use DateTimeImmutable;
     use DateTimeInterface;
     use Doctrine\ORM\EntityManager;
-    use Temant\AuthManager\Entity\Attempt;
+    use Temant\AuthManager\Entity\AttemptEntity;
     use Temant\AuthManager\Entity\Role;
     use Temant\AuthManager\Entity\Token;
     use Temant\AuthManager\Entity\User;
@@ -203,7 +203,7 @@ namespace Temant\AuthManager {
             $timePeriod = $timePeriod ?? new DateTime();
 
             return $user->getAttempts()
-                ->filter(fn(Attempt $attempt): bool
+                ->filter(fn(AttemptEntity $attempt): bool
                     => !$attempt->getSuccess() && $attempt->getCreatedAt() >= $timePeriod)
                 ->count();
         }
@@ -239,7 +239,7 @@ namespace Temant\AuthManager {
         public function deleteAuthenticationAttempts(User $user): bool
         {
             $deleteCount = $this->entityManager
-                ->getRepository(Attempt::class)
+                ->getRepository(AttemptEntity::class)
                 ->createQueryBuilder('a')
                 ->delete()
                 ->where('a.user = :user')
@@ -328,7 +328,7 @@ namespace Temant\AuthManager {
          * Lists all authentication attempts for a user.
          * 
          * @param User $user The user whose attempts are listed.
-         * @return Attempt[] Array of attempts.
+         * @return AttemptEntity[] Array of attempts.
          */
         public function listAuthenticationAttempts(User $user): array
         {
@@ -347,7 +347,7 @@ namespace Temant\AuthManager {
          */
         public function logAuthenticationAttempt(User $user, bool $success, ?string $reason = null, ?string $ipAddress = null, ?string $userAgent = null): bool
         {
-            $attempt = (new Attempt)
+            $attempt = (new AttemptEntity)
                 ->setUser($user)
                 ->setSuccess($success)
                 ->setReason($reason)
@@ -357,7 +357,7 @@ namespace Temant\AuthManager {
             $this->entityManager->persist($attempt);
             $this->entityManager->flush();
 
-            return $this->entityManager->getRepository(Attempt::class)->find($attempt) !== null;
+            return $this->entityManager->getRepository(AttemptEntity::class)->find($attempt) !== null;
         }
 
         /**

@@ -3,7 +3,7 @@
 namespace Temant\AuthManager {
 
     use DateTimeInterface;
-    use Temant\AuthManager\Entity\Attempt;
+    use Temant\AuthManager\Entity\AttemptEntity;
     use Temant\AuthManager\Entity\Role;
     use Temant\AuthManager\Entity\User;
     use Temant\AuthManager\Exceptions\EmailNotValidException;
@@ -90,7 +90,7 @@ namespace Temant\AuthManager {
          * Lists all authentication attempts for a user.
          * 
          * @param User $user The user whose attempts are listed.
-         * @return Attempt[] Array of attempts.
+         * @return AttemptEntity[] Array of attempts.
          */
         public function listAuthenticationAttempts(User $user): array;
 
