@@ -9,6 +9,8 @@ use Temant\SessionManager\SessionManager;
 
 require_once __DIR__ . "/vendor/autoload.php";
 
+date_default_timezone_set('Europe/Stockholm');
+
 
 $config = ORMSetup::createAttributeMetadataConfiguration(
     paths: [__DIR__],
@@ -30,12 +32,20 @@ $entityManager = new EntityManager($connection, $config);
 
 $sessionManager = new SessionManager();
 
+$sessionManager->setName('MY_CUSTOM_SESSION');
 $sessionManager->start();
 
 $authManager = new AuthManager($entityManager, $sessionManager);
+$user = $authManager->getUserByUsername('Emad.A29');
 
+$tokenManager = new TokenManager($entityManager);
 
+dd($tokenManager->addToken($user, 'TEST_TSTTSTST', (new DateTime())->modify('+2 days')));
 
+if ($token) {
+    dd($token->isValid());
+}
+dd();
 
 $emailCallback = function (User $user, string $selector, string $validator) {
     $resetLink = "https://{$_SERVER['HTTP_HOST']}/reset-password.php?selector=$selector&validator=$validator";

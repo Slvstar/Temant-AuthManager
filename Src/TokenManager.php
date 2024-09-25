@@ -1,11 +1,12 @@
 <?php declare(strict_types=1);
 
 namespace Temant\AuthManager {
+
     use DateTime;
+    use DateTimeInterface;
     use Doctrine\DBAL\Types\Types;
     use Doctrine\ORM\EntityManagerInterface;
-    use stdClass;
-    use Stringable;
+    use Temant\AuthManager\Dto\TokenDto;
     use Temant\AuthManager\Entity\Token;
     use Temant\AuthManager\Entity\User;
 
@@ -34,13 +35,13 @@ namespace Temant\AuthManager {
          *
          * @return TokenDto Contains the selector, hashed validator, and the full token string.
          */
-        public function generateToken(): TokenDto
+        private function generateToken(): TokenDto
         {
             $selector = bin2hex(random_bytes(16)); // 16 bytes selector
             $plainValidator = bin2hex(random_bytes(32)); // 32 bytes plaintext validator
             $hashedValidator = password_hash($plainValidator, PASSWORD_DEFAULT, ['cost' => self::VALIDATOR_HASH_COST]); // Hash the validator
 
-            // Return a TokenRepresentation object with all the necessary fields
+            // Return a TokenDto object with all the necessary fields
             return new TokenDto($selector, $hashedValidator, $plainValidator);
         }
 
@@ -79,7 +80,7 @@ namespace Temant\AuthManager {
          * Parses a token string into selector and plain validator components.
          *
          * @param string $token The full token string.
-         * @return string[]|null Selector and plain validator if valid, otherwise null.
+         * @return string[]|null Array containing the selector and plain validator, or null if the token is invalid.
          */
         public function parseToken(string $token): ?array
         {
@@ -94,17 +95,22 @@ namespace Temant\AuthManager {
          * @param string $type Token type (e.g., 'password_reset', 'email_activation').
          * @param string $selector The selector part of the token.
          * @param string $hashedValidator The hashed validator part of the token.
-         * @param int $lifetime Token validity duration in seconds.
+         * @param int|DateTimeInterface $lifetime Token validity duration in seconds or a DateTimeInterface expiration.
          * @return bool True if the token is saved successfully.
          */
-        public function saveToken(User $user, string $type, string $selector, string $hashedValidator, int $lifetime): bool
+        private function saveToken(User $user, string $type, string $selector, string $hashedValidator, int|DateTimeInterface $lifetime): bool
         {
+            // Determine expiration time
+            $expiresAt = $lifetime instanceof DateTimeInterface
+                ? $lifetime
+                : (new DateTime())->modify("+$lifetime seconds");
+
             $token = (new Token())
                 ->setUser($user)
                 ->setType($type)
                 ->setSelector($selector)
                 ->setValidator($hashedValidator)
-                ->setExpiresAt((new DateTime())->modify("+$lifetime seconds"));
+                ->setExpiresAt($expiresAt);
 
             $this->entityManager->persist($token);
             $this->entityManager->flush();
@@ -121,7 +127,7 @@ namespace Temant\AuthManager {
         public function getTokenBySelector(string $selector): ?Token
         {
             return $this->entityManager->getRepository(Token::class)->findOneBy(['selector' => $selector]);
-        } 
+        }
 
         /**
          * Validates the authenticity and expiration of a token.
@@ -130,16 +136,15 @@ namespace Temant\AuthManager {
          * @return bool True if valid and active, otherwise false.
          */
         public function isValid(string $token): bool
-        { 
+        {
             [$selector, $validator] = $this->parseToken($token) ?? [null, null];
             if (!$selector || !$validator) {
                 return false;
             }
-            $tokenData = $this->getTokenBySelector($selector); 
-
+            $tokenData = $this->getTokenBySelector($selector);
 
             // Ensure the token exists and has not expired
-            if (!$tokenData || $this->hasTokenExpired($tokenData->getExpiresAt())) {
+            if (!$tokenData || $tokenData->isExpired()) {
                 return false;
             }
 
@@ -175,30 +180,20 @@ namespace Temant\AuthManager {
         }
 
         /**
-         * Checks whether a token has expired.
+         * Adds a token for a user and saves it in the database.
          *
-         * @param DateTime $expiresAt The expiration date of the token.
-         * @return bool True if the token has expired, false otherwise.
+         * @param User $user The user to associate with the token.
+         * @param string $type Token type (e.g., 'password_reset', 'email_activation').
+         * @param int|DateTimeInterface $lifetime Token validity duration in seconds or a DateTimeInterface expiration.
+         * @return false|TokenDto The TokenDto object containing token details, or false if saving failed.
          */
-        private function hasTokenExpired(DateTime $expiresAt): bool
+        public function addToken(User $user, string $type, int|DateTimeInterface $lifetime): false|TokenDto
         {
-            return $expiresAt < new DateTime();
-        }
-    }
-
-    /**
-     * Represents a secure token with both selector and validator.
-     */
-    final readonly class TokenDto
-    {
-        public string $token;
-
-        public function __construct(
-            public string $selector,
-            public string $hashedValidator,
-            public string $plainValidator
-        ) {
-            $this->token = sprintf("%s:%s", $this->selector, $this->plainValidator);
+            $tokenDto = $this->generateToken();
+            if ($this->saveToken($user, $type, $tokenDto->selector, $tokenDto->hashedValidator, $lifetime)) {
+                return $tokenDto;
+            }
+            return false;
         }
     }
 }

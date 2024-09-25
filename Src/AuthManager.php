@@ -3,6 +3,7 @@
 namespace Temant\AuthManager {
 
     use DateTime;
+    use DateTimeImmutable;
     use DateTimeInterface;
     use Doctrine\ORM\EntityManager;
     use Temant\AuthManager\Entity\Attempt;
@@ -107,9 +108,8 @@ namespace Temant\AuthManager {
 
             // Additional logic for email verification, if enabled
             if ($this->getSetting(key: 'mail_verify')) {
-                $tokenDto = $this->tokenManager->generateToken();
-
-                $this->tokenManager->saveToken($newUser, 'email_activation', $tokenDto->selector, $tokenDto->hashedValidator, $this->getSetting('mail_activation_token_lifetime'));
+                $tokenLifetime = $this->getSetting('mail_activation_token_lifetime');
+                $tokenDto = $this->tokenManager->addToken($newUser, 'email_activation', $tokenLifetime);
                 $this->sendEmailVerification($newUser, $tokenDto->selector, $tokenDto->plainValidator);
             }
 
@@ -177,21 +177,18 @@ namespace Temant\AuthManager {
             // Remove any existing 'remember_me' tokens for the user to prevent token buildup
             $this->tokenManager->removeTokensForUserByType($user, 'remember_me');
 
-            // Generate a new 'remember_me' token
-            $tokenDto = $this->tokenManager->generateToken();
-
             // Retrieve configuration for 'remember_me' token lifetime and cookie name
             $tokenLifetimeDays = $this->getSetting('remember_me_token_lifetime');
             $cookieName = $this->getSetting('remember_me_cookie_name');
 
             // Calculate the cookie's expiration time based on the token's lifetime
-            $cookieExpiry = time() + 60 * 60 * 24 * $tokenLifetimeDays;
+            $cookieExpiry = (new DateTimeImmutable())->modify("+$tokenLifetimeDays seconds")->getTimestamp();
 
-            // Persist the new token associated with the user in the database
-            $this->tokenManager->saveToken($user, 'remember_me', $tokenDto->selector, $tokenDto->hashedValidator, $tokenLifetimeDays);
+            // Generate a new 'remember_me' token
+            $tokenDto = $this->tokenManager->addToken($user, 'remember_me', $cookieExpiry);
 
             // Set the 'remember_me' cookie in the user's browser with the generated token
-            CookieManager::set($cookieName, $tokenDto->token, (int) $cookieExpiry);
+            CookieManager::set($cookieName, $tokenDto->token, $cookieExpiry);
         }
 
         /**
@@ -597,10 +594,7 @@ namespace Temant\AuthManager {
             }
 
             // Generate new password reset token
-            $tokenDto = $this->tokenManager->generateToken();
-
-            // Save the reset token
-            $this->tokenManager->saveToken($user, 'password_reset', $tokenDto->selector, $tokenDto->hashedValidator, $this->getSetting('password_reset_token_lifetime'));
+            $tokenDto = $this->tokenManager->addToken($user, 'password_reset', $this->getSetting('password_reset_token_lifetime'));
 
             // Execute the email callback function
             $emailCallback($user, $tokenDto->selector, $tokenDto->plainValidator);

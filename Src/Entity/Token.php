@@ -113,5 +113,15 @@ namespace Temant\AuthManager\Entity {
             $user->addToken($this);
             return $this;
         }
+
+        public function isValid(): bool
+        {
+            return $this->expiresAt === null || new DateTime() < $this->expiresAt;
+        }
+
+        public function isExpired(): bool
+        {
+            return $this->expiresAt !== null && new DateTime() > $this->expiresAt;
+        }
     }
 }
