@@ -8,6 +8,8 @@ namespace Temant\AuthManager\Entity {
     use Doctrine\ORM\Mapping\Entity;
     use Doctrine\ORM\Mapping\GeneratedValue;
     use Doctrine\ORM\Mapping\Id;
+    use Doctrine\ORM\Mapping\InverseJoinColumn;
+    use Doctrine\ORM\Mapping\JoinColumn;
     use Doctrine\ORM\Mapping\JoinTable;
     use Doctrine\ORM\Mapping\ManyToMany;
     use Doctrine\ORM\Mapping\OneToMany;
@@ -33,6 +35,8 @@ namespace Temant\AuthManager\Entity {
 
         #[ManyToMany(targetEntity: PermissionEntity::class, inversedBy: "roles")]
         #[JoinTable(name: "authentication_role_permissions")]
+        #[JoinColumn(name: 'role_id', referencedColumnName: 'id')]
+        #[InverseJoinColumn(name: 'permission_id', referencedColumnName: 'id')]
         private Collection $permissions;
 
         public function __construct()
