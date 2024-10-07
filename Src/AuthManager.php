@@ -7,6 +7,7 @@ namespace Temant\AuthManager {
     use DateTimeInterface;
     use Doctrine\ORM\EntityManager;
     use Temant\AuthManager\Entity\AttemptEntity;
+    use Temant\AuthManager\Entity\PermissionEntity;
     use Temant\AuthManager\Entity\RoleEntity;
     use Temant\AuthManager\Entity\TokenEntity;
     use Temant\AuthManager\Entity\UserEntity;
@@ -555,6 +556,16 @@ namespace Temant\AuthManager {
         public function listAllRoles(): array
         {
             return $this->entityManager->getRepository(RoleEntity::class)->findAll();
+        }
+
+        /**
+         * Lists all permissions in the system.
+         * 
+         * @return PermissionEntity[] Array of all Role entities.
+         */
+        public function listAllPermissions(): array
+        {
+            return $this->entityManager->getRepository(PermissionEntity::class)->findAll();
         }
 
         /**

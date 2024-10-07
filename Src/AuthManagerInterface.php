@@ -4,6 +4,7 @@ namespace Temant\AuthManager {
 
     use DateTimeInterface;
     use Temant\AuthManager\Entity\AttemptEntity;
+    use Temant\AuthManager\Entity\PermissionEntity;
     use Temant\AuthManager\Entity\RoleEntity;
     use Temant\AuthManager\Entity\UserEntity;
     use Temant\AuthManager\Exceptions\EmailNotValidException;
@@ -186,6 +187,13 @@ namespace Temant\AuthManager {
          * @return RoleEntity[] Array of all Role entities.
          */
         public function listAllRoles(): array;
+
+        /**
+         * Lists all permissions in the system.
+         * 
+         * @return PermissionEntity[] Array of all permission entities.
+         */
+        public function listAllPermissions(): array;
 
         /**
          * Generates a password reset token and triggers an email callback.
