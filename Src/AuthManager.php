@@ -3,7 +3,6 @@
 namespace Temant\AuthManager {
 
     use DateTime;
-    use DateTimeImmutable;
     use DateTimeInterface;
     use Doctrine\ORM\EntityManager;
     use Temant\AuthManager\Entity\AttemptEntity;
@@ -183,13 +182,13 @@ namespace Temant\AuthManager {
             $cookieName = $this->getSetting('remember_me_cookie_name');
 
             // Calculate the cookie's expiration time based on the token's lifetime
-            $cookieExpiry = (new DateTimeImmutable())->modify("+$tokenLifetimeDays seconds")->getTimestamp();
+            $cookieExpiry = (new DateTime())->modify("+$tokenLifetimeDays seconds");
 
             // Generate a new 'remember_me' token
             $tokenDto = $this->tokenManager->addToken($user, 'remember_me', $cookieExpiry);
 
             // Set the 'remember_me' cookie in the user's browser with the generated token
-            CookieManager::set($cookieName, $tokenDto->token, $cookieExpiry);
+            CookieManager::set($cookieName, $tokenDto->token, $cookieExpiry->getTimestamp());
         }
 
         /**

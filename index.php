@@ -35,11 +35,13 @@ $sessionManager->setName('MY_CUSTOM_SESSION');
 $sessionManager->start();
 
 $authManager = new AuthManager($entityManager, $sessionManager);
-$user = $authManager->getUserByUsername('Emad.A29');
+$user = $authManager->getUserByUsername('Emad.A');
+
+dd($authManager->authenticate('Emad.A', '123',true));
 
 $tokenManager = new TokenManager($entityManager);
 
-dd($tokenManager->addToken($user, 'TEST_TSTTSTST', (new DateTime())->modify('+2 days')));
+dd($tokenManager->addToken($user, 'TEST_TSTTSTST', (new DateTimeImmutable())->modify('+2 days')));
 
 if ($token) {
     dd($token->isValid());
@@ -67,7 +69,6 @@ $emailCallback = function (UserEntity $user, string $selector, string $validator
 $user = $authManager->getUserByUsername('Emad.A29');
 $authManager->requestPasswordReset($user, $emailCallback);
 
-dd($authManager->authenticate('Emad.A29', '123'));
 
 if ($user) {
     dd($user);
