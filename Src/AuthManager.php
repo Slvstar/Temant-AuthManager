@@ -40,7 +40,6 @@ namespace Temant\AuthManager {
          */
         private readonly SettingsManager $settingsManager;
 
-
         /**
          * Token manager responsible for token operations such as creation, validation, and renewal.
          * 
@@ -58,7 +57,12 @@ namespace Temant\AuthManager {
             private readonly EntityManager $entityManager,
             private readonly SessionManagerInterface $sessionManagerInterface
         ) {
-            $this->settingsManager = new SettingsManager($entityManager, "authentication_settings");
+            $this->settingsManager = new SettingsManager(
+                $entityManager,
+                "authentication_settings",
+                include_once __DIR__ . "/DefaultSettings.php"
+            );
+
             $this->tokenManager = new TokenManager($entityManager);
         }
 
