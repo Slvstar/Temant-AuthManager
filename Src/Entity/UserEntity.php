@@ -48,6 +48,9 @@ namespace Temant\AuthManager\Entity {
         #[Column(name: 'created_at', type: "datetime")]
         private DateTimeInterface $createdAt;
 
+        #[Column(name: 'locale')]
+        private string $locale;
+
         #[ManyToOne(targetEntity: RoleEntity::class, inversedBy: "users")]
         private ?RoleEntity $role = null;
 
@@ -221,6 +224,17 @@ namespace Temant\AuthManager\Entity {
             return $this->role
                 ->getPermissions()
                 ->exists(fn($key, $permission): bool => $permission->getName() === $permissionName);
+        }
+
+        public function getLocale(): string
+        {
+            return $this->locale;
+        }
+
+        public function setLocale(string $locale): self
+        {
+            $this->locale = $locale;
+            return $this;
         }
     }
 }
