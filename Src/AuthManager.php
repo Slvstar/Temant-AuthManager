@@ -355,6 +355,8 @@ namespace Temant\AuthManager {
                 ->setUser($user)
                 ->setSuccess($success)
                 ->setReason($reason)
+                ->setLocation(Utils::GeoIP())
+                ->setDeviceType(Utils::getDeviceType())
                 ->setIpAddress($ipAddress ?: Utils::IP())
                 ->setUserAgent($userAgent ?: $_SERVER['HTTP_USER_AGENT']);
 

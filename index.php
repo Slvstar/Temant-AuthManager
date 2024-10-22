@@ -17,7 +17,7 @@ $sessionManager->start();
 $authManager = new AuthManager($entityManager, $sessionManager);
 $user = $authManager->getUserByUsername('Emad.A');
 
-dd($authManager->authenticate('Emad.A', '123', true));
+dd($authManager->authenticate('Emad.A', 'Slvstar123', true));
 
 $tokenManager = new TokenManager($entityManager);
 
