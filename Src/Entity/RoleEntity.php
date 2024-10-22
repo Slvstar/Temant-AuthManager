@@ -20,15 +20,15 @@ namespace Temant\AuthManager\Entity {
     class RoleEntity
     {
         #[Id]
-        #[Column(name: "id")]
+        #[Column]
         #[GeneratedValue]
         private int $id;
 
-        #[Column(name: "name")]
+        #[Column]
         private string $name;
 
-        #[Column(name: "description")]
-        private string $description;
+        #[Column(nullable: true)]
+        private ?string $description;
 
         #[OneToMany(targetEntity: UserEntity::class, mappedBy: "role")]
         private Collection $users;
@@ -61,12 +61,12 @@ namespace Temant\AuthManager\Entity {
             return $this;
         }
 
-        public function getDescription(): string
+        public function getDescription(): ?string
         {
             return $this->description;
         }
 
-        public function setDescription(string $description): self
+        public function setDescription(?string $description): self
         {
             $this->description = $description;
             return $this;

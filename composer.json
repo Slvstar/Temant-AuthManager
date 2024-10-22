@@ -11,12 +11,12 @@
         }
     },
     "require": {
-        "temant/cookie-manager": "^5.0",
-        "temant/session-manager": "^2.0",
-        "temant/settings-manager": "^1.2",
-        "doctrine/orm": "^3.1",
-        "doctrine/dbal": "^4.1",
-        "symfony/cache": "^7.1"
+        "temant/cookie-manager": "*",
+        "temant/session-manager": "*",
+        "temant/settings-manager": "*",
+        "doctrine/orm": "*",
+        "doctrine/dbal": "*",
+        "symfony/cache": "*"
     },
     "require-dev": {
         "phpunit/phpunit": "^11.3",

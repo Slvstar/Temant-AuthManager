@@ -10,13 +10,17 @@ namespace Temant\AuthManager\Entity {
     use Doctrine\ORM\Mapping\Column;
     use Doctrine\ORM\Mapping\Entity;
     use Doctrine\ORM\Mapping\GeneratedValue;
+    use Doctrine\ORM\Mapping\HasLifecycleCallbacks;
     use Doctrine\ORM\Mapping\Id;
     use Doctrine\ORM\Mapping\ManyToOne;
     use Doctrine\ORM\Mapping\OneToMany;
+    use Doctrine\ORM\Mapping\PrePersist;
+    use Doctrine\ORM\Mapping\PreUpdate;
     use Doctrine\ORM\Mapping\Table;
 
     #[Entity]
     #[Table(name: 'authentication_users')]
+    #[HasLifecycleCallbacks]
     class UserEntity
     {
         #[Id]
@@ -45,20 +49,23 @@ namespace Temant\AuthManager\Entity {
         #[Column(name: 'is_locked')]
         private bool $isLocked;
 
-        #[Column(name: 'created_at', type: "datetime")]
+        #[Column(name: 'created_at', type: "datetime", options: ["default" => "CURRENT_TIMESTAMP"])]
         private DateTimeInterface $createdAt;
 
-        #[Column(name: 'locale')]
-        private string $locale;
+        #[Column(nullable: true)]
+        private ?string $locale;
 
         #[ManyToOne(targetEntity: RoleEntity::class, inversedBy: "users")]
         private ?RoleEntity $role = null;
 
-        #[OneToMany(targetEntity: TokenEntity::class, mappedBy: "user", cascade: ["persist", "remove"])]
+        #[OneToMany(targetEntity: TokenEntity::class, mappedBy: "user", cascade: ["persist", "remove"], orphanRemoval: true)]
         private Collection $tokens;
 
-        #[OneToMany(targetEntity: AttemptEntity::class, mappedBy: "user", cascade: ["persist", "remove"])]
+        #[OneToMany(targetEntity: AttemptEntity::class, mappedBy: "user", cascade: ["persist", "remove"], orphanRemoval: true)]
         private Collection $attempts;
+
+        #[Column(name: 'updated_at', type: "datetime", nullable: true)]
+        private ?DateTimeInterface $updatedAt = null;
 
         public function __construct()
         {
@@ -226,14 +233,36 @@ namespace Temant\AuthManager\Entity {
                 ->exists(fn($key, $permission): bool => $permission->getName() === $permissionName);
         }
 
-        public function getLocale(): string
+        public function getLocale(): ?string
         {
             return $this->locale;
         }
 
-        public function setLocale(string $locale): self
+        public function setLocale(?string $locale): self
         {
             $this->locale = $locale;
+            return $this;
+        }
+
+        #[PrePersist]
+        #[PreUpdate]
+        public function updateTimestamps(): void
+        {
+            $this->updatedAt = new DateTime();
+
+            if ($this->createdAt === null) {
+                $this->createdAt = new DateTime();
+            }
+        }
+
+        public function getUpdatedAt(): ?DateTimeInterface
+        {
+            return $this->updatedAt;
+        }
+
+        public function setUpdatedAt(?DateTimeInterface $updatedAt): self
+        {
+            $this->updatedAt = $updatedAt;
             return $this;
         }
     }

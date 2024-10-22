@@ -1,13 +1,14 @@
 <?php declare(strict_types=1);
 
 namespace Temant\AuthManager\Entity {
-    
+
     use DateTime;
     use DateTimeInterface;
     use Doctrine\ORM\Mapping\Column;
     use Doctrine\ORM\Mapping\Entity;
     use Doctrine\ORM\Mapping\GeneratedValue;
-    use Doctrine\ORM\Mapping\Id; 
+    use Doctrine\ORM\Mapping\Id;
+    use Doctrine\ORM\Mapping\JoinColumn;
     use Doctrine\ORM\Mapping\ManyToOne;
     use Doctrine\ORM\Mapping\Table;
 
@@ -20,13 +21,14 @@ namespace Temant\AuthManager\Entity {
         #[Column]
         private ?int $id = null;
 
-        #[ManyToOne(targetEntity: UserEntity::class, inversedBy: 'attempts')] 
+        #[ManyToOne(targetEntity: UserEntity::class, inversedBy: 'attempts')]
+        #[JoinColumn(name: "user_id", referencedColumnName: "id", nullable: false, onDelete: "CASCADE")]
         private UserEntity $user;
 
         #[Column]
         private bool $success;
 
-        #[Column]
+        #[Column(nullable: true)]
         private ?string $reason = null;
 
         #[Column(name: "ip_address")]

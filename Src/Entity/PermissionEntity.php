@@ -16,15 +16,15 @@ namespace Temant\AuthManager\Entity {
     class PermissionEntity
     {
         #[Id]
-        #[Column(name: "id")]
+        #[Column]
         #[GeneratedValue]
         private int $id;
 
-        #[Column(name: "name")]
+        #[Column]
         private string $name;
 
-        #[Column(name: "description")]
-        private string $description;
+        #[Column]
+        private ?string $description;
 
         #[ManyToMany(targetEntity: RoleEntity::class, mappedBy: "permissions")]
         private Collection $roles;
@@ -63,16 +63,16 @@ namespace Temant\AuthManager\Entity {
         /**
          * @return string
          */
-        public function getDescription(): string
+        public function getDescription(): ?string
         {
             return $this->description;
         }
 
         /**
-         * @param string $description 
+         * @param ?string $description 
          * @return self
          */
-        public function setDescription(string $description): self
+        public function setDescription(?string $description): self
         {
             $this->description = $description;
             return $this;

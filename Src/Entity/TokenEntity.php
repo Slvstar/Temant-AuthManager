@@ -7,6 +7,7 @@ namespace Temant\AuthManager\Entity {
     use Doctrine\ORM\Mapping\Entity;
     use Doctrine\ORM\Mapping\GeneratedValue;
     use Doctrine\ORM\Mapping\Id;
+    use Doctrine\ORM\Mapping\JoinColumn;
     use Doctrine\ORM\Mapping\ManyToOne;
     use Doctrine\ORM\Mapping\Table;
 
@@ -20,6 +21,7 @@ namespace Temant\AuthManager\Entity {
         private int $id;
 
         #[ManyToOne(targetEntity: UserEntity::class, inversedBy: 'tokens')]
+        #[JoinColumn(name: "user_id", referencedColumnName: "id", nullable: false, onDelete: "CASCADE")]
         private UserEntity $user;
 
         #[Column(type: "string", length: 32)]
