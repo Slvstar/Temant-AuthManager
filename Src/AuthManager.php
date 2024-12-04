@@ -533,6 +533,19 @@ namespace Temant\AuthManager {
         }
 
         /**
+         * Fetches a user by their ID.
+         * 
+         * @param int $id The ID to search for.
+         * @return ?UserEntity The User entity, or null if not found.
+         */
+        public function getUser(int $id): ?UserEntity
+        {
+            return $this->entityManager
+                ->getRepository(UserEntity::class)
+                ->find($id);
+        }
+
+        /**
          * Fetches a user by their username.
          * 
          * @param string $username The username to search for.
@@ -540,7 +553,9 @@ namespace Temant\AuthManager {
          */
         public function getUserByUsername(string $username): ?UserEntity
         {
-            return $this->entityManager->getRepository(UserEntity::class)->findOneBy(['username' => $username]);
+            return $this->entityManager
+                ->getRepository(UserEntity::class)
+                ->findOneBy(['username' => $username]);
         }
 
         /**
@@ -550,7 +565,9 @@ namespace Temant\AuthManager {
          */
         public function listAllRegistredUsers(): array
         {
-            return $this->entityManager->getRepository(UserEntity::class)->findAll();
+            return $this->entityManager
+                ->getRepository(UserEntity::class)
+                ->findAll();
         }
 
         /**
@@ -560,7 +577,9 @@ namespace Temant\AuthManager {
          */
         public function listAllRoles(): array
         {
-            return $this->entityManager->getRepository(RoleEntity::class)->findAll();
+            return $this->entityManager
+                ->getRepository(RoleEntity::class)
+                ->findAll();
         }
 
         /**

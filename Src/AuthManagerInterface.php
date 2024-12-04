@@ -167,6 +167,14 @@ namespace Temant\AuthManager {
         public function getUserByUsername(string $username): ?UserEntity;
 
         /**
+         * Fetches a user by their ID.
+         * 
+         * @param int $id The ID to search for.
+         * @return ?UserEntity The User entity, or null if not found.
+         */
+        public function getUser(int $id): ?UserEntity;
+
+        /**
          * Lists all registered users.
          * 
          * @return UserEntity[] Array of all User entities.

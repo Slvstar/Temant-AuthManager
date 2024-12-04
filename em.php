@@ -19,7 +19,7 @@ $connection = DriverManager::getConnection([
     'driver' => 'pdo_mysql',
     'user' => 'root',
     'password' => 'root',
-    'dbname' => 'intradb',
+    'dbname' => 'authy',
 ], $config);
 
 return new EntityManager($connection, $config);
