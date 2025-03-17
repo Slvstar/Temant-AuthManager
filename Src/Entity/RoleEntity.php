@@ -24,7 +24,7 @@ namespace Temant\AuthManager\Entity {
         #[GeneratedValue]
         private int $id;
 
-        #[Column]
+        #[Column(unique: true)]
         private string $name;
 
         #[Column(nullable: true)]
