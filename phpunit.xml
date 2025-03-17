@@ -1,16 +1,14 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:noNamespaceSchemaLocation="https://schema.phpunit.de/11.3/phpunit.xsd"
-         bootstrap="vendor/autoload.php"
-         cacheDirectory=".phpunit.cache"
-         executionOrder="depends,defects"
-         shortenArraysForExportThreshold="10"
-         beStrictAboutCoverageMetadata="true"
-         beStrictAboutOutputDuringTests="true"
-         displayDetailsOnPhpunitDeprecations="true"
-         failOnPhpunitDeprecation="true"
-         failOnRisky="true"
-         failOnWarning="true">
+<phpunit bootstrap="vendor/autoload.php"
+    cacheDirectory="Tests/phpunit.cache"
+    executionOrder="depends,defects"
+    shortenArraysForExportThreshold="10"
+    beStrictAboutCoverageMetadata="true"
+    beStrictAboutOutputDuringTests="true"
+    displayDetailsOnPhpunitDeprecations="true"
+    failOnPhpunitDeprecation="true"
+    failOnRisky="true"
+    failOnWarning="true">
     <testsuites>
         <testsuite name="default">
             <directory>Tests</directory>
@@ -23,9 +21,10 @@
         </include>
     </source>
 
-    <coverage includeUncoveredFiles="true" pathCoverage="false" ignoreDeprecatedCodeUnits="true" disableCodeCoverageIgnore="true">
+    <coverage includeUncoveredFiles="true" pathCoverage="false" ignoreDeprecatedCodeUnits="true"
+        disableCodeCoverageIgnore="true">
         <report>
-            <html outputDirectory="html-coverage" lowUpperBound="50" highLowerBound="90"/>
+            <html outputDirectory="Tests/html-coverage" lowUpperBound="50" highLowerBound="90" />
         </report>
     </coverage>
 </phpunit>
