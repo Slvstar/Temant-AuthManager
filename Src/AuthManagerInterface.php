@@ -247,5 +247,13 @@ namespace Temant\AuthManager {
          * @return SettingEntity[] An array of all settings.
          */
         public function listSetting(): array;
+
+        /**
+         * Authenticates a user by their email address.
+         * 
+         * @param string $email The user's email address.
+         * @return bool Returns true if authentication is successful, false otherwise.
+         */
+        public function authenticateWithEmail(string $email): bool;
     }
 }

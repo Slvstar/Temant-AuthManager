@@ -132,6 +132,26 @@ namespace Temant\AuthManager {
         }
 
         /**
+         * Authenticates a user by their email address.
+         * 
+         * @param string $email The user's email address.
+         * @return bool Returns true if authentication is successful, false otherwise.
+         */
+        public function authenticateWithEmail(string $email): bool
+        {
+            $user = $this->entityManager->getRepository(UserEntity::class)->findOneBy(['email' => $email]);
+
+            if (!$user) {
+                return false;
+            }
+
+            // Finalize authentication process after all checks passed
+            $this->finalizeAuthentication($user);
+
+            return true; // Login successful
+        }
+
+        /**
          * Authenticates a user with provided credentials.
          * 
          * @param string $username The user's username or email.
