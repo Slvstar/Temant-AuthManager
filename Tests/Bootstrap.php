@@ -2,13 +2,16 @@
 use Doctrine\DBAL\DriverManager;
 use Doctrine\ORM\EntityManager;
 use Doctrine\ORM\ORMSetup;
+use Temant\AuthManager\AuthManager;
+use Temant\SessionManager\SessionManager;
 
-require_once __DIR__ . "/vendor/autoload.php";
+include_once __DIR__ . "/../vendor/autoload.php";
 
+// obtaining the entity manager
 date_default_timezone_set('Europe/Stockholm');
 
 $config = ORMSetup::createAttributeMetadataConfiguration(
-    paths: [__DIR__ . "/Src/Entity"],
+    paths: [__DIR__ . "/../Src/Entity"],
     isDevMode: true
 );
 
@@ -22,4 +25,12 @@ $connection = DriverManager::getConnection([
     'dbname' => 'authy',
 ], $config);
 
-return new EntityManager($connection, $config);
+$entityManager = new EntityManager($connection, $config);
+
+$sessionManager = new SessionManager();
+
+$sessionManager
+    ->setName('MY_CUSTOM_SESSION')
+    ->start();
+
+$authManager = new AuthManager($entityManager, $sessionManager);
