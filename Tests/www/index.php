@@ -26,8 +26,10 @@ if (!$authManager->isAuthenticated()) {
     <main class="p-6">
         <div class="bg-white p-6 rounded-xl shadow">
             <h2 class="text-2xl font-bold text-gray-700 mb-4">
-                <?= $authManager->getLoggedInUser()->getFullName() ?>, Welcome to your dashboard</h2>
+                <?= $authManager->getLoggedInUser()->getFullName() ?>, Welcome to your dashboard
+            </h2>
             <p class="text-gray-600">This is a secure area of the application. Customize it as needed.</p>
+            <?php dump($authManager->getLoggedInUser()) ?>
         </div>
     </main>
 </body>
