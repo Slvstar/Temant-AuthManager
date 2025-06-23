@@ -14,6 +14,7 @@ namespace Temant\AuthManager\Entity {
     use Doctrine\ORM\Mapping\Id;
     use Doctrine\ORM\Mapping\ManyToOne;
     use Doctrine\ORM\Mapping\OneToMany;
+    use Doctrine\ORM\Mapping\OneToOne;
     use Doctrine\ORM\Mapping\PrePersist;
     use Doctrine\ORM\Mapping\PreUpdate;
     use Doctrine\ORM\Mapping\Table;
@@ -66,6 +67,9 @@ namespace Temant\AuthManager\Entity {
 
         #[Column(name: 'updated_at', type: "datetime", nullable: true)]
         private ?DateTimeInterface $updatedAt = null;
+
+        #[OneToOne(targetEntity: ProfileEntity::class, mappedBy: "user", cascade: ["persist", "remove"], orphanRemoval: true)]
+        private ?ProfileEntity $profile = null;
 
         public function __construct()
         {
@@ -264,6 +268,32 @@ namespace Temant\AuthManager\Entity {
         {
             $this->updatedAt = $updatedAt;
             return $this;
+        }
+
+        public function getProfile(): ?ProfileEntity
+        {
+            return $this->profile;
+        }
+
+        public function setProfile(?ProfileEntity $profile): self
+        {
+            // unset the owning side of the relation if necessary
+            if ($profile === null && $this->profile !== null) {
+                $this->profile->setUser(null);
+            }
+
+            // set the owning side of the relation if necessary
+            if ($profile !== null && $profile->getUser() !== $this) {
+                $profile->setUser($this);
+            }
+
+            $this->profile = $profile;
+            return $this;
+        }
+
+        public function getInitials(): string
+        {
+            return $this->firstName[0] . $this->lastName[0];
         }
     }
 }
