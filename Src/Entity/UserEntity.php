@@ -293,7 +293,9 @@ namespace Temant\AuthManager\Entity {
 
         public function getInitials(): string
         {
-            return $this->firstName[0] . $this->lastName[0];
+            $firstInitial = strtoupper(substr($this->firstName, 0, 1));
+            $lastInitial = strtoupper(substr($this->lastName, 0, 1));
+            return sprintf("%s%s", $firstInitial, $lastInitial);
         }
     }
 }
