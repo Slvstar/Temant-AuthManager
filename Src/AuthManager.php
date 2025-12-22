@@ -544,12 +544,15 @@ namespace Temant\AuthManager {
         {
             $hashedPassword = $user->getPassword();
 
-            // Check if the password hash matches the current hashing algorithm and parameters
-            // and rehash if necessary. This ensures the security of stored passwords remains up-to-date.
-            if (password_needs_rehash($hashedPassword, PASSWORD_DEFAULT, ["cost" => self::PASSWORD_COST])) {
-                $this->changePassword($user, $hashedPassword);
+            if (!password_verify($password, $hashedPassword)) {
+                return false;
             }
-            return password_verify($password, $hashedPassword);
+
+            if (password_needs_rehash($hashedPassword, PASSWORD_DEFAULT, ['cost' => self::PASSWORD_COST])) {
+                $this->changePassword($user, $password);
+            }
+
+            return true;
         }
 
         /**
