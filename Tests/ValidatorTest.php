@@ -2,13 +2,10 @@
 
 namespace Temant\AuthManager\Tests {
 
-    use Doctrine\ORM\EntityManager;
-    use Doctrine\ORM\EntityRepository;
+    use Doctrine\ORM\EntityManager; 
     use PHPUnit\Framework\Attributes\TestWith;
-    use PHPUnit\Framework\TestCase;
-    use Temant\AuthManager\Entity\RoleEntity;
-    use Temant\AuthManager\Exceptions\EmailNotValidException;
-    use Temant\AuthManager\Exceptions\RoleNotFoundException;
+    use PHPUnit\Framework\TestCase; 
+    use Temant\AuthManager\Exceptions\EmailNotValidException; 
     use Temant\AuthManager\Exceptions\WeakPasswordException;
     use Temant\AuthManager\Utils\Validator;
 
@@ -31,27 +28,7 @@ namespace Temant\AuthManager\Tests {
             parent::tearDown();
 
             unset($this->validator);
-        }
-
-        public function testValidateRoleFound(): void
-        {
-            $role = new RoleEntity();
-            $roleRepo = $this->createMock(EntityRepository::class);
-            $roleRepo->method('find')->willReturn($role);
-            $this->entityManager->method('getRepository')->willReturn($roleRepo);
-
-            $this->assertSame($role, Validator::validateRole($this->entityManager, 1));
-        }
-
-        public function testValidateRoleNotFound(): void
-        {
-            $roleRepo = $this->createMock(EntityRepository::class);
-            $roleRepo->method('find')->willReturn(null);
-            $this->entityManager->method('getRepository')->willReturn($roleRepo);
-
-            $this->expectException(RoleNotFoundException::class);
-            Validator::validateRole($this->entityManager, 1);
-        }
+        } 
 
         public function testValidateEmail(): void
         {

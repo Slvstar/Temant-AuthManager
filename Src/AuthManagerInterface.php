@@ -1,257 +1,256 @@
-<?php declare(strict_types=1);
+<?php
 
-namespace Temant\AuthManager {
+declare(strict_types=1);
 
-    use DateTimeInterface;
-    use Temant\AuthManager\Entity\AttemptEntity;
-    use Temant\AuthManager\Entity\PermissionEntity;
-    use Temant\AuthManager\Entity\RoleEntity;
-    use Temant\AuthManager\Entity\UserEntity;
-    use Temant\AuthManager\Exceptions\EmailNotValidException;
-    use Temant\AuthManager\Exceptions\RoleNotFoundException;
-    use Temant\AuthManager\Exceptions\WeakPasswordException;
-    use Temant\SettingsManager\Entity\SettingEntity;
+namespace Temant\AuthManager;
 
-    interface AuthManagerInterface
-    {
-        /**
-         * Registers a new user with the provided details.
-         * 
-         * @param string $firstName User's first name.
-         * @param string $lastName User's last name.
-         * @param int $roleId ID of the role assigned to the user.
-         * @param string $email User's email address.
-         * @param string $password User's chosen password.
-         * 
-         * @return ?UserEntity Returns the registered User or null on failure.
-         * 
-         * @throws RoleNotFoundException If the role ID is invalid.
-         * @throws WeakPasswordException If the password does not meet security requirements.
-         * @throws EmailNotValidException If the email is invalid.
-         */
-        public function registerUser(string $firstName, string $lastName, int $roleId, string $email, string $password): ?UserEntity;
+use DateTimeInterface;
+use Temant\AuthManager\Entity\AttemptEntity;
+use Temant\AuthManager\Entity\PermissionEntity;
+use Temant\AuthManager\Entity\RoleEntity;
+use Temant\AuthManager\Entity\UserEntity;
+use Temant\AuthManager\Exceptions\EmailNotValidException;
+use Temant\AuthManager\Exceptions\WeakPasswordException;
+use Temant\SettingsManager\Entity\SettingEntity;
 
-        /**
-         * Removes a user from the database.
-         * 
-         * @param UserEntity $user The user entity to be deleted.
-         */
-        public function removeUser(UserEntity $user): void;
+interface AuthManagerInterface
+{
+    /**
+     * Registers a new user with the provided details.
+     * 
+     * @param string $firstName User's first name.
+     * @param string $lastName User's last name.
+     * @param string $email User's email address.
+     * @param string $password User's chosen password.
+     * @param ?RoleEntity $role The role assigned to the user.
+     * 
+     * @return ?UserEntity Returns the registered User or null on failure.
+     *  
+     * @throws WeakPasswordException If the password does not meet security requirements.
+     * @throws EmailNotValidException If the email is invalid.
+     */
+    public function registerUser(string $firstName, string $lastName, string $email, string $password, ?RoleEntity $role = null): ?UserEntity;
 
-        /**
-         * Authenticates a user with provided credentials.
-         * 
-         * @param string $username The user's username or email.
-         * @param string $password The user's password.
-         * @param bool $remember Optionally remembers the user across sessions.
-         * @return bool Returns true if authentication is successful, false otherwise.
-         */
-        public function authenticate(string $username, string $password, bool $remember = false): bool;
+    /**
+     * Removes a user from the database.
+     * 
+     * @param UserEntity $user The user entity to be deleted.
+     */
+    public function removeUser(UserEntity $user): void;
 
-        /**
-         * Counts failed login attempts by a user within a given time period.
-         * 
-         * @param UserEntity $user The user whose attempts are being counted.
-         * @param DateTimeInterface|null $timePeriod The period from which to count.
-         * @return int Number of failed attempts.
-         */
-        public function countFailedAuthenticationAttempts(UserEntity $user, ?DateTimeInterface $timePeriod = null): int;
+    /**
+     * Authenticates a user with provided credentials.
+     * 
+     * @param string $username The user's username or email.
+     * @param string $password The user's password.
+     * @param bool $remember Optionally remembers the user across sessions.
+     * @return bool Returns true if authentication is successful, false otherwise.
+     */
+    public function authenticate(string $username, string $password, bool $remember = false): bool;
 
-        /**
-         * Logs the user out by destroying the session and removing any tokens.
-         * 
-         * @return bool Returns true if logout was successful, false otherwise.
-         */
-        public function deauthenticate(): bool;
+    /**
+     * Counts failed login attempts by a user within a given time period.
+     * 
+     * @param UserEntity $user The user whose attempts are being counted.
+     * @param DateTimeInterface|null $timePeriod The period from which to count.
+     * @return int Number of failed attempts.
+     */
+    public function countFailedAuthenticationAttempts(UserEntity $user, ?DateTimeInterface $timePeriod = null): int;
 
-        /**
-         * Deletes all authentication attempts for a given user.
-         * 
-         * @param UserEntity $user The user whose attempts are deleted.
-         * @return bool Returns true if deletion was successful, false otherwise.
-         */
-        public function deleteAuthenticationAttempts(UserEntity $user): bool;
+    /**
+     * Logs the user out by destroying the session and removing any tokens.
+     * 
+     * @return bool Returns true if logout was successful, false otherwise.
+     */
+    public function deauthenticate(): bool;
 
-        /**
-         * Checks the status of the user's last authentication attempt.
-         * 
-         * @param UserEntity $user The user whose last attempt is checked.
-         * @return bool|null True if last attempt was successful, false if failed, null if no attempts exist.
-         */
-        public function getLastAuthenticationStatus(UserEntity $user): ?bool;
+    /**
+     * Deletes all authentication attempts for a given user.
+     * 
+     * @param UserEntity $user The user whose attempts are deleted.
+     * @return bool Returns true if deletion was successful, false otherwise.
+     */
+    public function deleteAuthenticationAttempts(UserEntity $user): bool;
 
-        /**
-         * Checks if a user is authenticated via session or "remember me" token.
-         * 
-         * @return bool True if the user is authenticated, false otherwise.
-         */
-        public function isAuthenticated(): bool;
+    /**
+     * Checks the status of the user's last authentication attempt.
+     * 
+     * @param UserEntity $user The user whose last attempt is checked.
+     * @return bool|null True if last attempt was successful, false if failed, null if no attempts exist.
+     */
+    public function getLastAuthenticationStatus(UserEntity $user): ?bool;
 
-        /**
-         * Lists all authentication attempts for a user.
-         * 
-         * @param UserEntity $user The user whose attempts are listed.
-         * @return AttemptEntity[] Array of attempts.
-         */
-        public function listAuthenticationAttempts(UserEntity $user): array;
+    /**
+     * Checks if a user is authenticated via session or "remember me" token.
+     * 
+     * @return bool True if the user is authenticated, false otherwise.
+     */
+    public function isAuthenticated(): bool;
 
-        /**
-         * Logs an authentication attempt with details such as success, IP address, and user agent.
-         * 
-         * @param UserEntity $user The user being logged.
-         * @param bool $success True if the attempt was successful, false if not.
-         * @param string|null $reason Optional reason for failure.
-         * @return bool True if logged successfully, false otherwise.
-         */
-        public function logAuthenticationAttempt(UserEntity $user, bool $success, ?string $reason = null): bool;
+    /**
+     * Lists all authentication attempts for a user.
+     * 
+     * @param UserEntity $user The user whose attempts are listed.
+     * @return AttemptEntity[] Array of attempts.
+     */
+    public function listAuthenticationAttempts(UserEntity $user): array;
 
-        /**
-         * Activates a user account, enabling access.
-         * 
-         * @param UserEntity $user The user to activate.
-         */
-        public function activateAccount(UserEntity $user): void;
+    /**
+     * Logs an authentication attempt with details such as success, IP address, and user agent.
+     * 
+     * @param UserEntity $user The user being logged.
+     * @param bool $success True if the attempt was successful, false if not.
+     * @param string|null $reason Optional reason for failure.
+     * @return bool True if logged successfully, false otherwise.
+     */
+    public function logAuthenticationAttempt(UserEntity $user, bool $success, ?string $reason = null): bool;
 
-        /**
-         * Deactivates a user account, disabling access.
-         * 
-         * @param UserEntity $user The user to deactivate.
-         */
-        public function deactivateAccount(UserEntity $user): void;
+    /**
+     * Activates a user account, enabling access.
+     * 
+     * @param UserEntity $user The user to activate.
+     */
+    public function activateAccount(UserEntity $user): void;
 
-        /**
-         * Checks if a user's account is activated.
-         * 
-         * @param UserEntity $user The user to check.
-         * @return bool True if activated, false otherwise.
-         */
-        public function isActivated(UserEntity $user): bool;
+    /**
+     * Deactivates a user account, disabling access.
+     * 
+     * @param UserEntity $user The user to deactivate.
+     */
+    public function deactivateAccount(UserEntity $user): void;
 
-        /**
-         * Checks if a user's account is locked.
-         * 
-         * @param UserEntity $user The user to check.
-         * @return bool True if locked, false otherwise.
-         */
-        public function isLocked(UserEntity $user): bool;
+    /**
+     * Checks if a user's account is activated.
+     * 
+     * @param UserEntity $user The user to check.
+     * @return bool True if activated, false otherwise.
+     */
+    public function isActivated(UserEntity $user): bool;
 
-        /**
-         * Locks a user account, preventing login.
-         * 
-         * @param UserEntity $user The user to lock.
-         */
-        public function lockAccount(UserEntity $user): void;
+    /**
+     * Checks if a user's account is locked.
+     * 
+     * @param UserEntity $user The user to check.
+     * @return bool True if locked, false otherwise.
+     */
+    public function isLocked(UserEntity $user): bool;
 
-        /**
-         * Unlocks a user account, allowing login.
-         * 
-         * @param UserEntity $user The user to unlock.
-         */
-        public function unlockAccount(UserEntity $user): void;
+    /**
+     * Locks a user account, preventing login.
+     * 
+     * @param UserEntity $user The user to lock.
+     */
+    public function lockAccount(UserEntity $user): void;
 
-        /**
-         * Fetches the currently logged-in user.
-         * 
-         * @return ?UserEntity Returns the User if logged in, otherwise null.
-         */
-        public function getLoggedInUser(): ?UserEntity;
+    /**
+     * Unlocks a user account, allowing login.
+     * 
+     * @param UserEntity $user The user to unlock.
+     */
+    public function unlockAccount(UserEntity $user): void;
 
-        /**
-         * Fetches a user by their username.
-         * 
-         * @param string $username The username to search for.
-         * @return ?UserEntity The User entity, or null if not found.
-         */
-        public function getUserByUsername(string $username): ?UserEntity;
+    /**
+     * Fetches the currently logged-in user.
+     * 
+     * @return ?UserEntity Returns the User if logged in, otherwise null.
+     */
+    public function getLoggedInUser(): ?UserEntity;
 
-        /**
-         * Fetches a user by their ID.
-         * 
-         * @param int $id The ID to search for.
-         * @return ?UserEntity The User entity, or null if not found.
-         */
-        public function getUser(int $id): ?UserEntity;
+    /**
+     * Fetches a user by their username.
+     * 
+     * @param string $username The username to search for.
+     * @return ?UserEntity The User entity, or null if not found.
+     */
+    public function getUserByUsername(string $username): ?UserEntity;
 
-        /**
-         * Lists all registered users.
-         * 
-         * @return UserEntity[] Array of all User entities.
-         */
-        public function listAllRegistredUsers(): array;
+    /**
+     * Fetches a user by their ID.
+     * 
+     * @param int $id The ID to search for.
+     * @return ?UserEntity The User entity, or null if not found.
+     */
+    public function getUser(int $id): ?UserEntity;
 
-        /**
-         * Hashes a plaintext password for secure storage.
-         * 
-         * @param string $password The plaintext password.
-         * @return string The hashed password.
-         */
-        public function hashPassword(string $password): string;
+    /**
+     * Lists all registered users.
+     * 
+     * @return UserEntity[] Array of all User entities.
+     */
+    public function listAllRegistredUsers(): array;
 
-        /**
-         * Lists all roles in the system.
-         * 
-         * @return RoleEntity[] Array of all Role entities.
-         */
-        public function listAllRoles(): array;
+    /**
+     * Hashes a plaintext password for secure storage.
+     * 
+     * @param string $password The plaintext password.
+     * @return string The hashed password.
+     */
+    public function hashPassword(string $password): string;
 
-        /**
-         * Lists all permissions in the system.
-         * 
-         * @return PermissionEntity[] Array of all permission entities.
-         */
-        public function listAllPermissions(): array;
+    /**
+     * Lists all roles in the system.
+     * 
+     * @return RoleEntity[] Array of all Role entities.
+     */
+    public function listAllRoles(): array;
 
-        /**
-         * Generates a password reset token and triggers an email callback.
-         *
-         * @param UserEntity $user The email of the user requesting the password reset.
-         * @param callable $emailCallback A callback function to send the reset email (e.g., sendEmail($user, $token)).
-         * @return bool Returns true if the reset token is generated and email sent, false otherwise.
-         */
-        public function requestPasswordReset(UserEntity $user, callable $emailCallback): bool;
+    /**
+     * Lists all permissions in the system.
+     * 
+     * @return PermissionEntity[] Array of all permission entities.
+     */
+    public function listAllPermissions(): array;
 
-        /**
-         * Resets the user's password after verifying the token.
-         *
-         * @param string $selector The token selector from the reset link.
-         * @param string $validator The token validator from the reset link.
-         * @param string $newPassword The new password to be set.
-         * @return bool Returns true if the password is successfully reset, false otherwise.
-         */
-        public function resetPassword(string $selector, string $validator, string $newPassword): bool;
+    /**
+     * Generates a password reset token and triggers an email callback.
+     *
+     * @param UserEntity $user The email of the user requesting the password reset.
+     * @param callable $emailCallback A callback function to send the reset email (e.g., sendEmail($user, $token)).
+     * @return bool Returns true if the reset token is generated and email sent, false otherwise.
+     */
+    public function requestPasswordReset(UserEntity $user, callable $emailCallback): bool;
 
-        /**
-         * Verifies a user's account using a token.
-         *
-         * @param string $selector The token selector from the verification link.
-         * @param string $validator The token validator from the verification link.
-         * @return bool Returns true if the account is successfully verified, false otherwise.
-         */
-        public function verifyAccount(string $selector, string $validator): bool;
+    /**
+     * Resets the user's password after verifying the token.
+     *
+     * @param string $selector The token selector from the reset link.
+     * @param string $validator The token validator from the reset link.
+     * @param string $newPassword The new password to be set.
+     * @return bool Returns true if the password is successfully reset, false otherwise.
+     */
+    public function resetPassword(string $selector, string $validator, string $newPassword): bool;
 
-        /**
-         * Sends a verification email to the user with a token for account activation.
-         * 
-         * @param UserEntity $user The user who needs email verification.
-         * @param string $selector The token selector.
-         * @param string $validator The token validator.
-         * @return bool Returns true if the email was sent successfully, false otherwise.
-         */
-        public function sendEmailVerification(UserEntity $user, string $selector, string $validator): bool;
+    /**
+     * Verifies a user's account using a token.
+     *
+     * @param string $selector The token selector from the verification link.
+     * @param string $validator The token validator from the verification link.
+     * @return bool Returns true if the account is successfully verified, false otherwise.
+     */
+    public function verifyAccount(string $selector, string $validator): bool;
 
-        /**
-         * Lists all system settings.
-         * 
-         * @return SettingEntity[] An array of all settings.
-         */
-        public function listSetting(): array;
+    /**
+     * Sends a verification email to the user with a token for account activation.
+     * 
+     * @param UserEntity $user The user who needs email verification.
+     * @param string $selector The token selector.
+     * @param string $validator The token validator.
+     * @return bool Returns true if the email was sent successfully, false otherwise.
+     */
+    public function sendEmailVerification(UserEntity $user, string $selector, string $validator): bool;
 
-        /**
-         * Authenticates a user by their email address.
-         * 
-         * @param string $email The user's email address.
-         * @return bool Returns true if authentication is successful, false otherwise.
-         */
-        public function authenticateWithEmail(string $email): bool;
-    }
+    /**
+     * Lists all system settings.
+     * 
+     * @return SettingEntity[] An array of all settings.
+     */
+    public function listSetting(): array;
+
+    /**
+     * Authenticates a user by their email address.
+     * 
+     * @param string $email The user's email address.
+     * @return bool Returns true if authentication is successful, false otherwise.
+     */
+    public function authenticateWithEmail(string $email): bool;
 }
