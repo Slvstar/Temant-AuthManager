@@ -101,11 +101,9 @@ namespace Temant\AuthManager {
          * @param UserEntity $user The user being logged.
          * @param bool $success True if the attempt was successful, false if not.
          * @param string|null $reason Optional reason for failure.
-         * @param string|null $ipAddress Optional IP address, defaults to current IP.
-         * @param string|null $userAgent Optional user agent, defaults to current user agent.
          * @return bool True if logged successfully, false otherwise.
          */
-        public function logAuthenticationAttempt(UserEntity $user, bool $success, ?string $reason = null, ?string $ipAddress = null, ?string $userAgent = null): bool;
+        public function logAuthenticationAttempt(UserEntity $user, bool $success, ?string $reason = null): bool;
 
         /**
          * Activates a user account, enabling access.

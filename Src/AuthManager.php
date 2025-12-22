@@ -14,7 +14,6 @@ namespace Temant\AuthManager {
     use Temant\AuthManager\Exceptions\RoleNotFoundException;
     use Temant\AuthManager\Exceptions\UsernameIncrementException;
     use Temant\AuthManager\Exceptions\WeakPasswordException;
-    use Temant\AuthManager\Utils\Utils;
     use Temant\AuthManager\Utils\Validator;
     use Temant\CookieManager\CookieManager;
     use Temant\SessionManager\SessionManagerInterface;
@@ -365,20 +364,14 @@ namespace Temant\AuthManager {
          * @param UserEntity $user The user being logged.
          * @param bool $success True if the attempt was successful, false if not.
          * @param string|null $reason Optional reason for failure.
-         * @param string|null $ipAddress Optional IP address, defaults to current IP.
-         * @param string|null $userAgent Optional user agent, defaults to current user agent.
          * @return bool True if logged successfully, false otherwise.
          */
-        public function logAuthenticationAttempt(UserEntity $user, bool $success, ?string $reason = null, ?string $ipAddress = null, ?string $userAgent = null): bool
+        public function logAuthenticationAttempt(UserEntity $user, bool $success, ?string $reason = null): bool
         {
             $attempt = (new AttemptEntity)
                 ->setUser($user)
                 ->setSuccess($success)
-                ->setReason($reason)
-                ->setLocation(Utils::GeoIP())
-                ->setDeviceType(Utils::getDeviceType())
-                ->setIpAddress($ipAddress ?: Utils::IP())
-                ->setUserAgent($userAgent ?: $_SERVER['HTTP_USER_AGENT']);
+                ->setReason($reason);
 
             $this->entityManager->persist($attempt);
             $this->entityManager->flush();
