@@ -44,10 +44,10 @@ namespace Temant\AuthManager\Entity {
         #[Column(name: 'password')]
         private string $password;
 
-        #[Column(name: 'is_activated', type: Types::BOOLEAN)]
+        #[Column(name: 'is_activated', type: Types::BOOLEAN, options: ["default" => true])]
         private bool $isActivated;
 
-        #[Column(name: 'is_locked')]
+        #[Column(name: 'is_locked', type: Types::BOOLEAN, options: ["default" => false])]
         private bool $isLocked;
 
         #[Column(name: 'created_at', type: "datetime", options: ["default" => "CURRENT_TIMESTAMP"])]
