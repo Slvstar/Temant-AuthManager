@@ -1,5 +1,8 @@
 {
     "name": "temant/auth-manager",
+    "description": "Full-featured authentication & authorization library: session auth, JWT, TOTP 2FA, hierarchical RBAC, rate limiting, and more.",
+    "type": "library",
+    "license": "MIT",
     "autoload": {
         "psr-4": {
             "Temant\\AuthManager\\": "Src/"
@@ -11,6 +14,7 @@
         }
     },
     "require": {
+        "php": ">=8.1",
         "temant/cookie-manager": "*",
         "temant/session-manager": "*",
         "temant/settings-manager": "*",

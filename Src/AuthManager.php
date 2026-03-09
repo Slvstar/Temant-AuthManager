@@ -7,14 +7,20 @@ namespace Temant\AuthManager;
 use DateTime;
 use DateTimeInterface;
 use Doctrine\ORM\EntityManager;
+use Temant\AuthManager\Dto\JwtDto;
+use Temant\AuthManager\Dto\TwoFactorSetupDto;
 use Temant\AuthManager\Entity\AttemptEntity;
 use Temant\AuthManager\Entity\PermissionEntity;
 use Temant\AuthManager\Entity\RoleEntity;
 use Temant\AuthManager\Entity\TokenEntity;
+use Temant\AuthManager\Entity\TwoFactorEntity;
 use Temant\AuthManager\Entity\UserEntity;
+use Temant\AuthManager\Enum\AuthStatus;
 use Temant\AuthManager\Exceptions\EmailNotValidException;
 use Temant\AuthManager\Exceptions\UsernameIncrementException;
 use Temant\AuthManager\Exceptions\WeakPasswordException;
+use Temant\AuthManager\Services\JwtService;
+use Temant\AuthManager\Services\TwoFactorService;
 use Temant\AuthManager\Utils\Validator;
 use Temant\CookieManager\CookieManager;
 use Temant\SessionManager\SessionManagerInterface;
@@ -24,284 +30,287 @@ use function count;
 use function sprintf;
 
 /**
- * AuthManager is responsible for managing the authentication and authorization process.
- * It handles user registration, login, token management, and account status modifications.
+ * AuthManager orchestrates authentication, authorization, 2FA, JWT, and
+ * all related account-management operations.
+ *
+ * Highlights:
+ *  - Session + "remember me" authentication
+ *  - TOTP two-factor authentication (RFC 6238) with backup codes
+ *  - Stateless JWT authentication (HS256/384/512)
+ *  - Multi-role RBAC with hierarchical role inheritance
+ *  - Direct per-user permission grants (bypassing roles)
+ *  - Rate limiting: auto-blocks after configurable failed-attempt threshold
+ *  - IP address and user-agent logging on every attempt
  */
 final class AuthManager implements AuthManagerInterface
 {
-    /**
-     * The cost factor for bcrypt password hashing.
-     * 
-     * @var int
-     */
     private const int PASSWORD_COST = 12;
 
-    /**
-     * Manages settings related to authentication.
-     *
-     * @var SettingsManager
-     */
+    /** Session key that stores the authenticated user's ID. */
+    private const string SESSION_USER = 'user';
+
+    /** Session key used during the REQUIRES_2FA interim state. */
+    private const string SESSION_2FA_PENDING_USER    = 'pending_2fa_user';
+    private const string SESSION_2FA_PENDING_REMEMBER = 'pending_2fa_remember';
+
+    /** Token type stored when a JWT is revoked. */
+    private const string TOKEN_TYPE_JWT_REVOKED = 'jwt_revoked';
+
     private readonly SettingsManager $settingsManager;
-
-    /**
-     * Token manager responsible for token operations such as creation, validation, and renewal.
-     * 
-     * @var TokenManager
-     */
     private readonly TokenManager $tokenManager;
+    private readonly TwoFactorService $twoFactorService;
+    private ?JwtService $jwtService = null;
 
-    /**
-     * AuthManager constructor to initialize dependencies.
-     * 
-     * @param EntityManager $entityManager Manages database operations.
-     * @param SessionManagerInterface $sessionManagerInterface Handles user session management.
-     */
     public function __construct(
         private readonly EntityManager $entityManager,
         private readonly SessionManagerInterface $sessionManagerInterface
     ) {
-        $this->settingsManager = new SettingsManager(
+        $this->settingsManager  = new SettingsManager(
             $entityManager,
-            "authentication_settings",
-            include_once __DIR__ . "/DefaultSettings.php"
+            'authentication_settings',
+            include __DIR__ . '/DefaultSettings.php'
         );
-
-        $this->tokenManager = new TokenManager($entityManager);
+        $this->tokenManager    = new TokenManager($entityManager);
+        $this->twoFactorService = new TwoFactorService();
     }
 
+    // ── User registration & removal ───────────────────────────────────────────
+
     /**
-     * Registers a new user with the provided details.
-     * 
-     * @param string $firstName User's first name.
-     * @param string $lastName User's last name.
-     * @param string $email User's email address.
-     * @param string $password User's chosen password.
-     * @param ?RoleEntity $role The role assigned to the user.
-     * 
-     * @return ?UserEntity Returns the registered User or null on failure.
-     * 
-     * @throws WeakPasswordException If the password does not meet security requirements.
-     * @throws EmailNotValidException If the email is invalid.
+     * {@inheritdoc}
      */
-    public function registerUser(string $firstName, string $lastName, string $email, string $password, ?RoleEntity $role = null): ?UserEntity
-    {
-        // Generate a username based on the provided first and last name
+    public function registerUser(
+        string $firstName,
+        string $lastName,
+        string $email,
+        string $password,
+        ?RoleEntity $role = null
+    ): ?UserEntity {
         $username = $this->generateUserName($firstName, $lastName);
 
-        // Password validation checks
         $validatedPassword = Validator::validatePassword($password, [
-            'min_length' => $this->getSetting('password_min_length'),
+            'min_length'        => $this->getSetting('password_min_length'),
             'require_uppercase' => $this->getSetting('password_require_uppercase'),
             'require_lowercase' => $this->getSetting('password_require_lowercase'),
-            'require_numeric' => $this->getSetting('password_require_numeric'),
-            'require_special' => $this->getSetting('password_require_special')
+            'require_numeric'   => $this->getSetting('password_require_numeric'),
+            'require_special'   => $this->getSetting('password_require_special'),
         ]);
 
-        // Create a new User entity and set its properties
-        $newUser = (new UserEntity)
+        $newUser = (new UserEntity())
             ->setUserName($username)
             ->setFirstName($firstName)
             ->setLastName($lastName)
             ->setEmail(Validator::validateEmail($email))
             ->setPassword($this->hashPassword($validatedPassword))
             ->setIsActivated(false)
-            ->setIsLocked(false)
-            ->setRole($role);
+            ->setIsLocked(false);
 
-        // Persist the new User entity to the database
+        if ($role !== null) {
+            $newUser->addRole($role);
+        }
+
         $this->entityManager->persist($newUser);
         $this->entityManager->flush();
 
-        // Additional logic for email verification, if enabled
-        if ($this->getSetting(key: 'mail_verify')) {
-            $tokenLifetime = $this->getSetting('mail_activation_token_lifetime');
-            $tokenDto = $this->tokenManager->addToken($newUser, 'email_activation', $tokenLifetime);
-            $this->sendEmailVerification($newUser, $tokenDto->selector, $tokenDto->plainValidator);
+        if ($this->getSetting('mail_verify')) {
+            $lifetime = (int) $this->getSetting('mail_activation_token_lifetime');
+            $tokenDto = $this->tokenManager->addToken($newUser, 'email_activation', $lifetime);
+            if ($tokenDto) {
+                $this->sendEmailVerification($newUser, $tokenDto->selector, $tokenDto->plainValidator);
+            }
         }
 
-        return $this->entityManager->getRepository(UserEntity::class)->find($newUser);
+        return $this->entityManager->getRepository(UserEntity::class)->find($newUser->getId());
     }
 
-    /**
-     * Removes a user from the database.
-     * 
-     * @param UserEntity $user The user entity to be deleted.
-     */
     public function removeUser(UserEntity $user): void
     {
         $this->entityManager->remove($user);
         $this->entityManager->flush();
     }
 
+    // ── Authentication ────────────────────────────────────────────────────────
+
     /**
-     * Authenticates a user by their email address.
-     * 
-     * @param string $email The user's email address.
-     * @return bool Returns true if authentication is successful, false otherwise.
+     * {@inheritdoc}
      */
-    public function authenticateWithEmail(string $email): bool
+    public function authenticate(string $username, string $password, bool $remember = false): AuthStatus
+    {
+        $user = filter_var($username, FILTER_VALIDATE_EMAIL)
+            ? $this->entityManager->getRepository(UserEntity::class)->findOneBy(['email' => $username])
+            : $this->entityManager->getRepository(UserEntity::class)->findOneBy(['username' => $username]);
+
+        if (!$user) {
+            return AuthStatus::FAILED;
+        }
+
+        // Rate-limit check
+        $lockoutWindow  = (int) $this->getSetting('lockout_duration');
+        $maxAttempts    = (int) $this->getSetting('max_failed_attempts');
+        $windowStart    = (new DateTime())->modify("-{$lockoutWindow} seconds");
+        $failedCount    = $this->countFailedAuthenticationAttempts($user, $windowStart);
+
+        if ($failedCount >= $maxAttempts) {
+            return AuthStatus::TOO_MANY_ATTEMPTS;
+        }
+
+        if (!$this->isActivated($user)) {
+            $this->logAuthenticationAttempt($user, false, 'Account not activated', $this->clientIp(), $this->clientUserAgent());
+            return AuthStatus::ACCOUNT_INACTIVE;
+        }
+
+        if ($this->isLocked($user)) {
+            $this->logAuthenticationAttempt($user, false, 'Account locked', $this->clientIp(), $this->clientUserAgent());
+            return AuthStatus::ACCOUNT_LOCKED;
+        }
+
+        if (!$this->verifyPassword($user, $password)) {
+            $this->logAuthenticationAttempt($user, false, 'Wrong password', $this->clientIp(), $this->clientUserAgent());
+            return AuthStatus::FAILED;
+        }
+
+        // Credentials correct — check whether 2FA is required
+        if ($user->isTwoFactorEnabled()) {
+            $this->sessionManagerInterface->set(self::SESSION_2FA_PENDING_USER, $user->getId());
+            $this->sessionManagerInterface->set(self::SESSION_2FA_PENDING_REMEMBER, $remember);
+            return AuthStatus::REQUIRES_2FA;
+        }
+
+        $this->finalizeAuthentication($user, $remember);
+        return AuthStatus::SUCCESS;
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function authenticateWithEmail(string $email): AuthStatus
     {
         $user = $this->entityManager->getRepository(UserEntity::class)->findOneBy(['email' => $email]);
 
         if (!$user) {
-            return false;
+            return AuthStatus::FAILED;
         }
 
-        // Finalize authentication process after all checks passed
-        $this->finalizeAuthentication($user);
-
-        return true; // Login successful
-    }
-
-    /**
-     * Authenticates a user with provided credentials.
-     * 
-     * @param string $username The user's username or email.
-     * @param string $password The user's password.
-     * @param bool $remember Optionally remembers the user across sessions.
-     * @return bool Returns true if authentication is successful, false otherwise.
-     */
-    public function authenticate(string $username, string $password, bool $remember = false): bool
-    {
-        // Retrieve the user entity based on the provided username
-        if (filter_var($username, FILTER_VALIDATE_EMAIL)) {
-            $user = $this->entityManager->getRepository(UserEntity::class)->findOneBy(['email' => $username]);
-        } else {
-            $user = $this->entityManager->getRepository(UserEntity::class)->findOneBy(['username' => $username]);
-        }
-
-        // Check if user exists
-        if (!$user) {
-            return false;
-        }
-
-        // Check if user account is activated
         if (!$this->isActivated($user)) {
-            $this->logAuthenticationAttempt($user, false, 'User not activated');
-            return false;
+            return AuthStatus::ACCOUNT_INACTIVE;
         }
 
-        // Check if the provided password is correct
-        if (!$this->verifyPassword($user, $password)) {
-            $this->logAuthenticationAttempt($user, false, 'Wrong password');
-            return false;
+        if ($this->isLocked($user)) {
+            return AuthStatus::ACCOUNT_LOCKED;
         }
 
-        // Finalize authentication process after all checks passed
+        $this->finalizeAuthentication($user);
+        return AuthStatus::SUCCESS;
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function verifyTwoFactor(string $code): AuthStatus
+    {
+        $userId = $this->sessionManagerInterface->get(self::SESSION_2FA_PENDING_USER);
+        if (!$userId) {
+            return AuthStatus::FAILED;
+        }
+
+        $user = $this->entityManager->getRepository(UserEntity::class)->find((int) $userId);
+        if (!$user || !$user->isTwoFactorEnabled()) {
+            return AuthStatus::FAILED;
+        }
+
+        if (!$this->twoFactorService->verify($user->getTwoFactor()->getSecret(), $code)) {
+            $this->logAuthenticationAttempt($user, false, 'Invalid 2FA code', $this->clientIp(), $this->clientUserAgent());
+            return AuthStatus::FAILED;
+        }
+
+        $remember = (bool) $this->sessionManagerInterface->get(self::SESSION_2FA_PENDING_REMEMBER);
+        $this->sessionManagerInterface->set(self::SESSION_2FA_PENDING_USER, null);
+        $this->sessionManagerInterface->set(self::SESSION_2FA_PENDING_REMEMBER, null);
+
         $this->finalizeAuthentication($user, $remember);
-
-        return true; // Login successful
+        return AuthStatus::SUCCESS;
     }
 
     /**
-     * Enables "remember me" functionality by generating a token and setting a cookie.
-     * 
-     * @param UserEntity $user The user to remember.
+     * {@inheritdoc}
      */
-    private function rememberUser(UserEntity $user): void
+    public function verifyTwoFactorBackupCode(string $code): AuthStatus
     {
-        // Remove any existing 'remember_me' tokens for the user to prevent token buildup
-        $this->tokenManager->removeTokensForUserByType($user, 'remember_me');
+        $userId = $this->sessionManagerInterface->get(self::SESSION_2FA_PENDING_USER);
+        if (!$userId) {
+            return AuthStatus::FAILED;
+        }
 
-        // Retrieve configuration for 'remember_me' token lifetime and cookie name
-        $tokenLifetimeDays = $this->getSetting('remember_me_token_lifetime');
-        $cookieName = $this->getSetting('remember_me_cookie_name');
+        $user = $this->entityManager->getRepository(UserEntity::class)->find((int) $userId);
+        if (!$user || !$user->isTwoFactorEnabled()) {
+            return AuthStatus::FAILED;
+        }
 
-        // Calculate the cookie's expiration time based on the token's lifetime
-        $cookieExpiry = (new DateTime())->modify("+$tokenLifetimeDays seconds");
+        $twoFactor = $user->getTwoFactor();
+        $matchedIndex = $this->twoFactorService->verifyBackupCode($code, $twoFactor->getBackupCodes());
 
-        // Generate a new 'remember_me' token
-        $tokenDto = $this->tokenManager->addToken($user, 'remember_me', $cookieExpiry);
+        if ($matchedIndex === false) {
+            $this->logAuthenticationAttempt($user, false, 'Invalid backup code', $this->clientIp(), $this->clientUserAgent());
+            return AuthStatus::FAILED;
+        }
 
-        // Set the 'remember_me' cookie in the user's browser with the generated token
-        CookieManager::set($cookieName, $tokenDto->token, $cookieExpiry->getTimestamp());
+        // Consume the used backup code so it cannot be reused
+        $codes = $twoFactor->getBackupCodes();
+        unset($codes[$matchedIndex]);
+        $twoFactor->setBackupCodes(array_values($codes));
+        $this->entityManager->flush();
+
+        $remember = (bool) $this->sessionManagerInterface->get(self::SESSION_2FA_PENDING_REMEMBER);
+        $this->sessionManagerInterface->set(self::SESSION_2FA_PENDING_USER, null);
+        $this->sessionManagerInterface->set(self::SESSION_2FA_PENDING_REMEMBER, null);
+
+        $this->finalizeAuthentication($user, $remember);
+        return AuthStatus::SUCCESS;
     }
 
     /**
-     * Counts failed login attempts by a user within a given time period.
-     * 
-     * @param UserEntity $user The user whose attempts are being counted.
-     * @param DateTimeInterface|null $timePeriod The period from which to count.
-     * @return int Number of failed attempts.
+     * {@inheritdoc}
      */
-    public function countFailedAuthenticationAttempts(UserEntity $user, ?DateTimeInterface $timePeriod = null): int
+    public function authenticateWithJwt(string $token): ?UserEntity
     {
-        $timePeriod = $timePeriod ?? new DateTime();
-
-        return $user->getAttempts()
-            ->filter(fn(AttemptEntity $attempt): bool
-                => !$attempt->getSuccess() && $attempt->getCreatedAt() >= $timePeriod)
-            ->count();
+        $dto = $this->validateJwt($token);
+        if ($dto === null) {
+            return null;
+        }
+        return $this->getUser($dto->userId);
     }
 
     /**
-     * Logs the user out by destroying the session and removing any tokens.
-     * 
-     * @return bool Returns true if logout was successful, false otherwise.
+     * {@inheritdoc}
      */
     public function deauthenticate(): bool
     {
-        $loggedInUser = $this->getLoggedInUser();
-        $rememberMeCookieName = $this->getSetting('remember_me_cookie_name');
-
-        // Remove "remember me" tokens for the logged-in user, if any
-        if ($loggedInUser) {
-            $this->tokenManager->removeTokensForUserByType($loggedInUser, $rememberMeCookieName);
+        $user = $this->getLoggedInUser();
+        if ($user) {
+            $this->tokenManager->removeTokensForUserByType($user, 'remember_me');
         }
 
-        // Delete the "remember me" cookie
-        CookieManager::delete($rememberMeCookieName);
+        $cookieName = (string) $this->getSetting('remember_me_cookie_name');
+        CookieManager::delete($cookieName);
 
-        // Destroy the session to complete the logout process
         return $this->sessionManagerInterface->destroy();
     }
 
     /**
-     * Deletes all authentication attempts for a given user.
-     * 
-     * @param UserEntity $user The user whose attempts are deleted.
-     * @return bool Returns true if deletion was successful, false otherwise.
-     */
-    public function deleteAuthenticationAttempts(UserEntity $user): bool
-    {
-        $deleteCount = $this->entityManager
-            ->getRepository(AttemptEntity::class)
-            ->createQueryBuilder('a')
-            ->delete()
-            ->where('a.user = :user')
-            ->setParameter('user', $user)
-            ->getQuery()->execute();
-
-        return $deleteCount > 0;
-    }
-
-    /**
-     * Checks the status of the user's last authentication attempt.
-     * 
-     * @param UserEntity $user The user whose last attempt is checked.
-     * @return bool|null True if last attempt was successful, false if failed, null if no attempts exist.
-     */
-    public function getLastAuthenticationStatus(UserEntity $user): ?bool
-    {
-        return $user->getAttempts()->last()?->getSuccess();
-    }
-
-    /**
-     * Checks if a user is authenticated via session or "remember me" token.
-     * 
-     * @return bool True if the user is authenticated, false otherwise.
+     * {@inheritdoc}
      */
     public function isAuthenticated(): bool
     {
-        // Check for an existing authenticated user session
-        if ($this->sessionManagerInterface->has('user')) {
+        if ($this->sessionManagerInterface->has(self::SESSION_USER)) {
             return true;
         }
 
-        // Attempt to authenticate using a "remember-me" token, if present
-        $token = filter_input(INPUT_COOKIE, $this->getSetting('remember_me_cookie_name'), FILTER_SANITIZE_FULL_SPECIAL_CHARS);
+        $cookieName = (string) $this->getSetting('remember_me_cookie_name');
+        $token      = filter_input(INPUT_COOKIE, $cookieName, FILTER_SANITIZE_FULL_SPECIAL_CHARS);
+
         if ($token && $this->tokenManager->isValid($token)) {
-            if ($user = $this->findUserByToken($token)) {
+            $user = $this->findUserByToken($token);
+            if ($user) {
                 $this->finalizeAuthentication($user);
                 return true;
             }
@@ -311,424 +320,584 @@ final class AuthManager implements AuthManagerInterface
     }
 
     /**
-     * Finalizes user authentication, setting the session and handling "remember me".
-     * 
-     * @param UserEntity $user The user to finalize authentication for.
-     * @param bool $remember If true, enables "remember me" functionality.
+     * {@inheritdoc}
      */
-    private function finalizeAuthentication(UserEntity $user, bool $remember = false): void
+    public function getLoggedInUser(): ?UserEntity
     {
-        // Regenerate the session to prevent session fixation attacks
-        $this->sessionManagerInterface->regenerate();
-        // Delete previous failed attempts
-        $this->deleteAuthenticationAttempts($user);
-        // Log successful authentication attempt
-        $this->logAuthenticationAttempt($user, true);
-        // Store the user entity in the session
-        $this->sessionManagerInterface->set('user', $user->getId());
-
-        if ($remember) {
-            $this->rememberUser($user);
+        if (!$this->isAuthenticated()) {
+            return null;
         }
+
+        $userId = $this->sessionManagerInterface->get(self::SESSION_USER);
+        return $this->entityManager->getRepository(UserEntity::class)->find($userId);
     }
 
-    /**
-     * Finds a user by a "remember me" token.
-     * 
-     * @param string $token The "remember me" token.
-     * @return ?UserEntity Returns the user if the token is valid, otherwise null.
-     */
-    private function findUserByToken(string $token): ?UserEntity
-    {
-        // Attempt to parse the token to extract the selector component.
-        [$selector] = $this->tokenManager->parseToken($token);
+    // ── Account status ────────────────────────────────────────────────────────
 
-        // Find the token entity by its selector.
-        $tokenEntity = $this->entityManager->getRepository(TokenEntity::class)->findOneBy(['selector' => $selector]);
-
-        // Return the associated User entity if the token is found, null otherwise.
-        return $tokenEntity?->getUser();
-    }
-
-    /**
-     * Lists all authentication attempts for a user.
-     * 
-     * @param UserEntity $user The user whose attempts are listed.
-     * @return AttemptEntity[] Array of attempts.
-     */
-    public function listAuthenticationAttempts(UserEntity $user): array
-    {
-        return $user->getAttempts()->toArray();
-    }
-
-    /**
-     * Logs an authentication attempt with details such as success, IP address, and user agent.
-     * 
-     * @param UserEntity $user The user being logged.
-     * @param bool $success True if the attempt was successful, false if not.
-     * @param string|null $reason Optional reason for failure.
-     * @return bool True if logged successfully, false otherwise.
-     */
-    public function logAuthenticationAttempt(UserEntity $user, bool $success, ?string $reason = null): bool
-    {
-        $attempt = (new AttemptEntity)
-            ->setUser($user)
-            ->setSuccess($success)
-            ->setReason($reason);
-
-        $this->entityManager->persist($attempt);
-        $this->entityManager->flush();
-
-        return $this->entityManager->getRepository(AttemptEntity::class)->find($attempt) !== null;
-    }
-
-    /**
-     * Activates a user account, enabling access.
-     * 
-     * @param UserEntity $user The user to activate.
-     */
     public function activateAccount(UserEntity $user): void
     {
         $user->setIsActivated(true);
         $this->entityManager->flush();
     }
 
-    /**
-     * Deactivates a user account, disabling access.
-     * 
-     * @param UserEntity $user The user to deactivate.
-     */
     public function deactivateAccount(UserEntity $user): void
     {
         $user->setIsActivated(false);
         $this->entityManager->flush();
     }
 
-    /**
-     * Checks if a user's account is activated.
-     * 
-     * @param UserEntity $user The user to check.
-     * @return bool True if activated, false otherwise.
-     */
     public function isActivated(UserEntity $user): bool
     {
         return $user->getIsActivated();
     }
 
-    /**
-     * Checks if a user's account is locked.
-     * 
-     * @param UserEntity $user The user to check.
-     * @return bool True if locked, false otherwise.
-     */
-    public function isLocked(UserEntity $user): bool
-    {
-        return $user->getIsLocked();
-    }
-
-    /**
-     * Locks a user account, preventing login.
-     * 
-     * @param UserEntity $user The user to lock.
-     */
     public function lockAccount(UserEntity $user): void
     {
         $user->setIsLocked(true);
         $this->entityManager->flush();
     }
 
-    /**
-     * Unlocks a user account, allowing login.
-     * 
-     * @param UserEntity $user The user to unlock.
-     */
     public function unlockAccount(UserEntity $user): void
     {
         $user->setIsLocked(false);
         $this->entityManager->flush();
     }
 
-    /**
-     * Generates a unique username based on the user's first name and last initial.
-     * 
-     * @param string $firstName The user's first name.
-     * @param string $lastName The user's last name.
-     * @return string The generated username.
-     * @throws UsernameIncrementException If incrementing usernames is not allowed.
-     */
-    private function generateUserName(string $firstName, string $lastName): string
+    public function isLocked(UserEntity $user): bool
     {
-        $usernameBase = sprintf('%s.%s', ucfirst($firstName), ucfirst(substr($lastName, 0, 1)));
-
-        // Retrieve users with usernames starting with the base username
-        $existingUsernames = array_map(fn(UserEntity $user): string
-            => $user->getUserName(), $this->entityManager->getRepository(UserEntity::class)->findAll());
-
-        // Filter usernames to find those that match the pattern
-        $matchingUsernames = array_filter($existingUsernames, fn(string $username): bool
-            => str_starts_with($username, $usernameBase));
-
-        // Count matching usernames to determine the new username's suffix
-        $countMatchingUsernames = count($matchingUsernames);
-
-        // If there are matching usernames, append the count + 1 to the base username
-        if ($countMatchingUsernames > 0) {
-            if (!$this->getSetting('allow_username_increment')) {
-                throw new UsernameIncrementException(
-                    sprintf("Incremented usernames are not permitted. Unable to create a unique username based on '%s'.", $usernameBase)
-                );
-            }
-            return $usernameBase . ($countMatchingUsernames + 1);
-        }
-
-        // If there are no matching usernames, return the base username
-        return $usernameBase;
+        return $user->getIsLocked();
     }
 
-    /**
-     * Fetches the currently logged-in user.
-     * 
-     * @return ?UserEntity Returns the User if logged in, otherwise null.
-     */
-    public function getLoggedInUser(): ?UserEntity
-    {
-        // Check if the user is authenticated
-        if (!$this->isAuthenticated()) {
-            return null;
-        }
+    // ── Password management ───────────────────────────────────────────────────
 
-        // Retrieve the user ID stored in the session
-        $userId = $this->sessionManagerInterface->get('user');
-
-        // Fetch and return the User entity associated with the logged-in user's ID
-        return $this->entityManager
-            ->getRepository(UserEntity::class)
-            ->find($userId);
-    }
-
-    /**
-     * Updates a user's password.
-     * 
-     * @param UserEntity $user The user whose password is updated.
-     * @param string $newPassword The new password to set.
-     */
-    private function changePassword(UserEntity $user, string $newPassword): void
-    {
-        $user->setPassword($this->hashPassword($newPassword));
-        $this->entityManager->flush();
-    }
-
-    /**
-     * Hashes a plaintext password for secure storage.
-     * 
-     * @param string $password The plaintext password.
-     * @return string The hashed password.
-     */
     public function hashPassword(string $password): string
     {
-        return password_hash($password, PASSWORD_DEFAULT, ["cost" => self::PASSWORD_COST]);
+        return password_hash($password, PASSWORD_DEFAULT, ['cost' => self::PASSWORD_COST]);
     }
 
-    /**
-     * Verifies a plaintext password against a stored hashed password.
-     * 
-     * @param UserEntity $user The user whose password is being verified.
-     * @param string $password The plaintext password to verify.
-     * @return bool True if the password is correct, false otherwise.
-     */
-    private function verifyPassword(UserEntity $user, string $password): bool
+    public function requestPasswordReset(UserEntity $user, callable $emailCallback): bool
     {
-        $hashedPassword = $user->getPassword();
+        $user = $this->entityManager->getRepository(UserEntity::class)->find($user->getId());
+        if (!$user) {
+            throw new EmailNotValidException('No user found with this ID.');
+        }
 
-        if (!password_verify($password, $hashedPassword)) {
+        $lifetime = (int) $this->getSetting('password_reset_token_lifetime');
+        $tokenDto = $this->tokenManager->addToken($user, 'password_reset', $lifetime);
+        if (!$tokenDto) {
             return false;
         }
 
-        if (password_needs_rehash($hashedPassword, PASSWORD_DEFAULT, ['cost' => self::PASSWORD_COST])) {
-            $this->changePassword($user, $password);
+        $emailCallback($user, $tokenDto->selector, $tokenDto->plainValidator);
+        return true;
+    }
+
+    public function resetPassword(string $selector, string $validator, string $newPassword): bool
+    {
+        $tokenEntity = $this->tokenManager->getTokenBySelector($selector);
+        if (!$tokenEntity || !$this->tokenManager->isValid("{$selector}:{$validator}")) {
+            return false;
         }
+
+        $user = $tokenEntity->getUser();
+        $this->changePassword($user, $newPassword);
+        $this->tokenManager->removeTokensForUserByType($user, 'password_reset');
+
+        return true;
+    }
+
+    // ── Email verification ────────────────────────────────────────────────────
+
+    public function verifyAccount(string $selector, string $validator): bool
+    {
+        $tokenEntity = $this->tokenManager->getTokenBySelector($selector);
+        if (!$tokenEntity || !$this->tokenManager->isValid("{$selector}:{$validator}")) {
+            return false;
+        }
+
+        $user = $tokenEntity->getUser();
+        $this->activateAccount($user);
+        $this->tokenManager->removeToken($tokenEntity);
+
+        return true;
+    }
+
+    public function sendEmailVerification(UserEntity $user, string $selector, string $validator): bool
+    {
+        $subject = 'Please activate your account';
+        $host    = $_SERVER['HTTP_HOST'] ?? 'localhost';
+        $message = <<<MSG
+            Hi {$user->getFirstName()},
+
+            Please click the following link to activate your account:
+            https://{$host}/activate-account.php?selector={$selector}&validator={$validator}
+            MSG;
+
+        return mail($user->getEmail(), $subject, nl2br($message), 'From:no-reply@' . $host);
+    }
+
+    // ── Two-factor authentication ─────────────────────────────────────────────
+
+    /**
+     * {@inheritdoc}
+     */
+    public function setup2FA(UserEntity $user): TwoFactorSetupDto
+    {
+        // Remove any previous unconfirmed 2FA setup
+        $existing = $user->getTwoFactor();
+        if ($existing !== null && !$existing->isConfirmed()) {
+            $this->entityManager->remove($existing);
+            $this->entityManager->flush();
+            $user->setTwoFactor(null);
+        }
+
+        $secret      = $this->twoFactorService->generateSecret();
+        $issuer      = (string) ($this->getSetting('two_factor_issuer') ?? 'AuthManager');
+        $backupCount = (int) ($this->getSetting('two_factor_backup_codes_count') ?? 8);
+
+        $backupPairs  = $this->twoFactorService->generateBackupCodes($backupCount);
+        $plainCodes   = array_keys($backupPairs);
+        $hashedCodes  = array_values($backupPairs);
+
+        $twoFactor = (new TwoFactorEntity())
+            ->setUser($user)
+            ->setSecret($secret)
+            ->setBackupCodes($hashedCodes)
+            ->setIsEnabled(false)
+            ->setIsConfirmed(false);
+
+        $user->setTwoFactor($twoFactor);
+        $this->entityManager->persist($twoFactor);
+        $this->entityManager->flush();
+
+        $uri = $this->twoFactorService->getProvisioningUri($secret, $user->getEmail(), $issuer);
+
+        return new TwoFactorSetupDto($secret, $uri, $plainCodes);
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function confirm2FA(UserEntity $user, string $code): bool
+    {
+        $twoFactor = $user->getTwoFactor();
+        if ($twoFactor === null || $twoFactor->isConfirmed()) {
+            return false;
+        }
+
+        if (!$this->twoFactorService->verify($twoFactor->getSecret(), $code)) {
+            return false;
+        }
+
+        $twoFactor->setIsEnabled(true)->setIsConfirmed(true);
+        $this->entityManager->flush();
 
         return true;
     }
 
     /**
-     * Fetches a user by their ID.
-     * 
-     * @param int $id The ID to search for.
-     * @return ?UserEntity The User entity, or null if not found.
+     * {@inheritdoc}
      */
+    public function disable2FA(UserEntity $user, string $code): bool
+    {
+        $twoFactor = $user->getTwoFactor();
+        if ($twoFactor === null || !$twoFactor->isEnabled()) {
+            return false;
+        }
+
+        if (!$this->twoFactorService->verify($twoFactor->getSecret(), $code)) {
+            return false;
+        }
+
+        $this->entityManager->remove($twoFactor);
+        $user->setTwoFactor(null);
+        $this->entityManager->flush();
+
+        return true;
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function regenerateBackupCodes(UserEntity $user, string $code): array|false
+    {
+        $twoFactor = $user->getTwoFactor();
+        if ($twoFactor === null || !$twoFactor->isEnabled()) {
+            return false;
+        }
+
+        if (!$this->twoFactorService->verify($twoFactor->getSecret(), $code)) {
+            return false;
+        }
+
+        $backupCount = (int) ($this->getSetting('two_factor_backup_codes_count') ?? 8);
+        $backupPairs = $this->twoFactorService->generateBackupCodes($backupCount);
+
+        $twoFactor->setBackupCodes(array_values($backupPairs));
+        $this->entityManager->flush();
+
+        return array_keys($backupPairs);
+    }
+
+    public function isTwoFactorEnabled(UserEntity $user): bool
+    {
+        return $user->isTwoFactorEnabled();
+    }
+
+    // ── JWT ───────────────────────────────────────────────────────────────────
+
+    /**
+     * {@inheritdoc}
+     */
+    public function generateJwt(UserEntity $user, ?int $expiry = null): string
+    {
+        return $this->getJwtService()->generate($user, $expiry);
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function validateJwt(string $token): ?JwtDto
+    {
+        $dto = $this->getJwtService()->validate($token);
+        if ($dto === null) {
+            return null;
+        }
+
+        // Check revocation list (JTI stored as selector in the token table)
+        if ($this->tokenManager->getTokenBySelector($dto->jti) !== null) {
+            return null;
+        }
+
+        return $dto;
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function revokeJwt(string $token): bool
+    {
+        $dto = $this->validateJwt($token);
+        if ($dto === null) {
+            return false;
+        }
+
+        $user = $this->getUser($dto->userId);
+        if (!$user) {
+            return false;
+        }
+
+        $expiresAt = (new DateTime())->setTimestamp($dto->expiresAt);
+
+        $revocation = (new TokenEntity())
+            ->setUser($user)
+            ->setType(self::TOKEN_TYPE_JWT_REVOKED)
+            ->setSelector($dto->jti)
+            ->setValidator('revoked')
+            ->setExpiresAt($expiresAt);
+
+        $this->entityManager->persist($revocation);
+        $this->entityManager->flush();
+
+        return true;
+    }
+
+    // ── Attempt logging ───────────────────────────────────────────────────────
+
+    public function logAuthenticationAttempt(
+        UserEntity $user,
+        bool $success,
+        ?string $reason = null,
+        ?string $ipAddress = null,
+        ?string $userAgent = null
+    ): bool {
+        $attempt = (new AttemptEntity())
+            ->setUser($user)
+            ->setSuccess($success)
+            ->setReason($reason)
+            ->setIpAddress($ipAddress)
+            ->setUserAgent($userAgent);
+
+        $this->entityManager->persist($attempt);
+        $this->entityManager->flush();
+
+        return $this->entityManager->getRepository(AttemptEntity::class)->find($attempt->getId()) !== null;
+    }
+
+    public function countFailedAuthenticationAttempts(UserEntity $user, ?DateTimeInterface $since = null): int
+    {
+        $since ??= new DateTime();
+
+        return $user->getAttempts()
+            ->filter(static fn(AttemptEntity $a): bool
+                => !$a->getSuccess() && $a->getCreatedAt() >= $since)
+            ->count();
+    }
+
+    public function listAuthenticationAttempts(UserEntity $user): array
+    {
+        return $user->getAttempts()->toArray();
+    }
+
+    public function deleteAuthenticationAttempts(UserEntity $user): bool
+    {
+        $deleted = $this->entityManager
+            ->getRepository(AttemptEntity::class)
+            ->createQueryBuilder('a')
+            ->delete()
+            ->where('a.user = :user')
+            ->setParameter('user', $user)
+            ->getQuery()
+            ->execute();
+
+        return $deleted > 0;
+    }
+
+    public function getLastAuthenticationStatus(UserEntity $user): ?bool
+    {
+        return $user->getAttempts()->last()?->getSuccess();
+    }
+
+    // ── Role / Permission management ──────────────────────────────────────────
+
+    public function createRole(string $name, ?string $description = null, ?RoleEntity $parent = null): RoleEntity
+    {
+        $role = (new RoleEntity())
+            ->setName($name)
+            ->setDescription($description)
+            ->setParent($parent);
+
+        $this->entityManager->persist($role);
+        $this->entityManager->flush();
+
+        return $role;
+    }
+
+    public function deleteRole(RoleEntity $role): void
+    {
+        $this->entityManager->remove($role);
+        $this->entityManager->flush();
+    }
+
+    public function createPermission(string $name, ?string $description = null): PermissionEntity
+    {
+        $permission = (new PermissionEntity())
+            ->setName($name)
+            ->setDescription($description);
+
+        $this->entityManager->persist($permission);
+        $this->entityManager->flush();
+
+        return $permission;
+    }
+
+    public function deletePermission(PermissionEntity $permission): void
+    {
+        $this->entityManager->remove($permission);
+        $this->entityManager->flush();
+    }
+
+    public function assignRole(UserEntity $user, RoleEntity $role): void
+    {
+        $user->addRole($role);
+        $this->entityManager->flush();
+    }
+
+    public function removeRoleFromUser(UserEntity $user, RoleEntity $role): void
+    {
+        $user->removeRole($role);
+        $this->entityManager->flush();
+    }
+
+    public function assignDirectPermission(UserEntity $user, PermissionEntity $permission): void
+    {
+        $user->addDirectPermission($permission);
+        $this->entityManager->flush();
+    }
+
+    public function removeDirectPermission(UserEntity $user, PermissionEntity $permission): void
+    {
+        $user->removeDirectPermission($permission);
+        $this->entityManager->flush();
+    }
+
+    public function addPermissionToRole(RoleEntity $role, PermissionEntity $permission): void
+    {
+        $role->addPermission($permission);
+        $this->entityManager->flush();
+    }
+
+    public function removePermissionFromRole(RoleEntity $role, PermissionEntity $permission): void
+    {
+        $role->removePermission($permission);
+        $this->entityManager->flush();
+    }
+
+    // ── Queries ───────────────────────────────────────────────────────────────
+
     public function getUser(int $id): ?UserEntity
     {
-        return $this->entityManager
-            ->getRepository(UserEntity::class)
-            ->find($id);
+        return $this->entityManager->getRepository(UserEntity::class)->find($id);
     }
 
-    /**
-     * Fetches a user by their username.
-     * 
-     * @param string $username The username to search for.
-     * @return ?UserEntity The User entity, or null if not found.
-     */
     public function getUserByUsername(string $username): ?UserEntity
     {
-        return $this->entityManager
-            ->getRepository(UserEntity::class)
-            ->findOneBy(['username' => $username]);
+        return $this->entityManager->getRepository(UserEntity::class)->findOneBy(['username' => $username]);
     }
 
-    /**
-     * Lists all registered users.
-     * 
-     * @return UserEntity[] Array of all User entities.
-     */
+    public function getUserByEmail(string $email): ?UserEntity
+    {
+        return $this->entityManager->getRepository(UserEntity::class)->findOneBy(['email' => $email]);
+    }
+
     public function listAllRegistredUsers(): array
     {
-        return $this->entityManager
-            ->getRepository(UserEntity::class)
-            ->findAll();
+        return $this->entityManager->getRepository(UserEntity::class)->findAll();
     }
 
-    /**
-     * Lists all roles in the system.
-     * 
-     * @return RoleEntity[] Array of all Role entities.
-     */
     public function listAllRoles(): array
     {
-        return $this->entityManager
-            ->getRepository(RoleEntity::class)
-            ->findAll();
+        return $this->entityManager->getRepository(RoleEntity::class)->findAll();
     }
 
-    /**
-     * Lists all permissions in the system.
-     * 
-     * @return PermissionEntity[] Array of all Role entities.
-     */
     public function listAllPermissions(): array
     {
         return $this->entityManager->getRepository(PermissionEntity::class)->findAll();
     }
 
-    /**
-     * Retrieves a system setting by key.
-     * 
-     * @param string $key The key for the setting.
-     * @return mixed The setting value.
-     */
+    // ── Settings ──────────────────────────────────────────────────────────────
+
+    public function listSetting(): array
+    {
+        return $this->settingsManager->all();
+    }
+
+    // ── Private helpers ───────────────────────────────────────────────────────
+
     private function getSetting(string $key): mixed
     {
         return $this->settingsManager->get($key)?->getValue();
     }
 
     /**
-     * Lists all system settings.
-     * 
-     * @return array An array of all settings.
+     * Finalizes a successful authentication: regenerates the session, clears failed
+     * attempts, logs success, stores the user ID, and optionally sets a remember-me token.
      */
-    public function listSetting(): array
+    private function finalizeAuthentication(UserEntity $user, bool $remember = false): void
     {
-        return $this->settingsManager->all();
+        $this->sessionManagerInterface->regenerate();
+        $this->deleteAuthenticationAttempts($user);
+        $this->logAuthenticationAttempt($user, true, null, $this->clientIp(), $this->clientUserAgent());
+        $this->sessionManagerInterface->set(self::SESSION_USER, $user->getId());
+
+        if ($remember) {
+            $this->rememberUser($user);
+        }
     }
 
-    /**
-     * Generates a password reset token and triggers an email callback.
-     *
-     * @param UserEntity $user The email of the user requesting the password reset.
-     * @param callable $emailCallback A callback function to send the reset email (e.g., sendEmail($user, $token)).
-     * @return bool Returns true if the reset token is generated and email sent, false otherwise.
-     */
-    public function requestPasswordReset(UserEntity $user, callable $emailCallback): bool
+    private function rememberUser(UserEntity $user): void
     {
-        $user = $this->entityManager->getRepository(UserEntity::class)->find($user);
+        $this->tokenManager->removeTokensForUserByType($user, 'remember_me');
 
-        if (!$user) {
-            throw new EmailNotValidException("No user found with this email.");
+        $lifetime   = (int) $this->getSetting('remember_me_token_lifetime');
+        $cookieName = (string) $this->getSetting('remember_me_cookie_name');
+        $expiresAt  = (new DateTime())->modify("+{$lifetime} seconds");
+        $tokenDto   = $this->tokenManager->addToken($user, 'remember_me', $expiresAt);
+
+        if ($tokenDto) {
+            CookieManager::set($cookieName, $tokenDto->token, $expiresAt->getTimestamp());
+        }
+    }
+
+    private function verifyPassword(UserEntity $user, string $password): bool
+    {
+        $hash = $user->getPassword();
+
+        if (!password_verify($password, $hash)) {
+            return false;
         }
 
-        // Generate new password reset token
-        $tokenDto = $this->tokenManager->addToken($user, 'password_reset', $this->getSetting('password_reset_token_lifetime'));
-
-        // Execute the email callback function
-        $emailCallback($user, $tokenDto->selector, $tokenDto->plainValidator);
+        if (password_needs_rehash($hash, PASSWORD_DEFAULT, ['cost' => self::PASSWORD_COST])) {
+            $this->changePassword($user, $password);
+        }
 
         return true;
     }
 
-    /**
-     * Resets the user's password after verifying the token.
-     *
-     * @param string $selector The token selector from the reset link.
-     * @param string $validator The token validator from the reset link.
-     * @param string $newPassword The new password to be set.
-     * @return bool Returns true if the password is successfully reset, false otherwise.
-     */
-    public function resetPassword(string $selector, string $validator, string $newPassword): bool
+    private function changePassword(UserEntity $user, string $newPassword): void
     {
-        $tokenEntity = $this->tokenManager->getTokenBySelector($selector);
+        $user->setPassword($this->hashPassword($newPassword));
+        $this->entityManager->flush();
+    }
 
-        if ($tokenEntity && $this->tokenManager->isValid("$selector:$validator")) {
-            $user = $tokenEntity->getUser();
+    private function findUserByToken(string $token): ?UserEntity
+    {
+        $parsed = $this->tokenManager->parseToken($token);
+        if (!$parsed) {
+            return null;
+        }
+        [$selector] = $parsed;
+        $tokenEntity = $this->entityManager->getRepository(TokenEntity::class)->findOneBy(['selector' => $selector]);
+        return $tokenEntity?->getUser();
+    }
 
-            // Update password
-            $this->changePassword($user, $newPassword);
+    private function generateUserName(string $firstName, string $lastName): string
+    {
+        $base      = sprintf('%s.%s', ucfirst($firstName), ucfirst(substr($lastName, 0, 1)));
+        $all       = array_map(
+            static fn(UserEntity $u): string => $u->getUserName(),
+            $this->entityManager->getRepository(UserEntity::class)->findAll()
+        );
+        $matching  = array_filter($all, static fn(string $u): bool => str_starts_with($u, $base));
+        $count     = count($matching);
 
-            // Remove the reset token
-            $this->tokenManager->removeTokensForUserByType($user, 'password_reset');
-
-            return true;
+        if ($count > 0) {
+            if (!$this->getSetting('allow_username_increment')) {
+                throw new UsernameIncrementException(
+                    sprintf("Username increment is disabled; cannot create unique username from '%s'.", $base)
+                );
+            }
+            return $base . ($count + 1);
         }
 
-        return false;
+        return $base;
     }
 
     /**
-     * Verifies a user's account using a token.
+     * Returns a lazily-initialised JwtService using settings for the secret/algorithm/expiry.
      *
-     * @param string $selector The token selector from the verification link.
-     * @param string $validator The token validator from the verification link.
-     * @return bool Returns true if the account is successfully verified, false otherwise.
+     * @throws \RuntimeException If jwt_secret has not been configured.
      */
-    public function verifyAccount(string $selector, string $validator): bool
+    private function getJwtService(): JwtService
     {
-        $tokenEntity = $this->tokenManager->getTokenBySelector($selector);
-
-        if ($tokenEntity && $this->tokenManager->isValid("$selector:$validator")) {
-            $user = $tokenEntity->getUser();
-            $this->activateAccount($user);
-
-            // Remove token after successful verification
-            $this->tokenManager->removeToken($tokenEntity);
-            return true;
+        if ($this->jwtService === null) {
+            $secret = (string) $this->getSetting('jwt_secret');
+            if (empty($secret)) {
+                throw new \RuntimeException(
+                    'JWT secret is not configured. Set "jwt_secret" in your AuthManager settings.'
+                );
+            }
+            $this->jwtService = new JwtService(
+                $secret,
+                (string) ($this->getSetting('jwt_algorithm') ?? 'HS256'),
+                (int)   ($this->getSetting('jwt_expiry')    ?? 3600)
+            );
         }
-
-        return false;
+        return $this->jwtService;
     }
 
-    /**
-     * Sends a verification email to the user with a token for account activation.
-     * 
-     * @param UserEntity $user The user who needs email verification.
-     * @param string $selector The token selector.
-     * @param string $validator The token validator.
-     * @return bool Returns true if the email was sent successfully, false otherwise.
-     */
-    public function sendEmailVerification(UserEntity $user, string $selector, string $validator): bool
+    /** Returns the client's IP address from common headers, or null in CLI context. */
+    private function clientIp(): ?string
     {
-        // Retrieve the user's email address
-        $email = $user->getEmail();
+        if (!empty($_SERVER['HTTP_X_FORWARDED_FOR'])) {
+            return trim(explode(',', (string) $_SERVER['HTTP_X_FORWARDED_FOR'])[0]);
+        }
+        return $_SERVER['REMOTE_ADDR'] ?? null;
+    }
 
-        // Set email subject and body
-        $subject = 'Please activate your account';
-        $message = <<<MESSAGE
-            Hi,
-
-            Please click the following link to activate your account:
-            https://{$_SERVER['HTTP_HOST']}/activate-account.php?userId={$user->getUserName()}&selector=$selector&validator=$validator
-            MESSAGE;
-
-        // Send the email
-        return mail($email, $subject, nl2br($message), "From:no-reply@email.com");
+    /** Returns the client's User-Agent string, or null in CLI context. */
+    private function clientUserAgent(): ?string
+    {
+        return $_SERVER['HTTP_USER_AGENT'] ?? null;
     }
 }

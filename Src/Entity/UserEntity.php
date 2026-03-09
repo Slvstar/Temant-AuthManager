@@ -12,7 +12,10 @@ namespace Temant\AuthManager\Entity {
     use Doctrine\ORM\Mapping\GeneratedValue;
     use Doctrine\ORM\Mapping\HasLifecycleCallbacks;
     use Doctrine\ORM\Mapping\Id;
-    use Doctrine\ORM\Mapping\ManyToOne;
+    use Doctrine\ORM\Mapping\InverseJoinColumn;
+    use Doctrine\ORM\Mapping\JoinColumn;
+    use Doctrine\ORM\Mapping\JoinTable;
+    use Doctrine\ORM\Mapping\ManyToMany;
     use Doctrine\ORM\Mapping\OneToMany;
     use Doctrine\ORM\Mapping\OneToOne;
     use Doctrine\ORM\Mapping\PrePersist;
@@ -50,14 +53,33 @@ namespace Temant\AuthManager\Entity {
         #[Column(name: 'is_locked', type: Types::BOOLEAN, options: ["default" => false])]
         private bool $isLocked;
 
-        #[Column(name: 'created_at', type: "datetime", options: ["default" => "CURRENT_TIMESTAMP"])]
+        #[Column(name: 'created_at', type: Types::DATETIME_MUTABLE, options: ["default" => "CURRENT_TIMESTAMP"])]
         private DateTimeInterface $createdAt;
 
-        #[Column(nullable: true)]
-        private ?string $locale;
+        #[Column(name: 'updated_at', type: Types::DATETIME_MUTABLE, nullable: true)]
+        private ?DateTimeInterface $updatedAt = null;
 
-        #[ManyToOne(targetEntity: RoleEntity::class, inversedBy: "users")]
-        private ?RoleEntity $role = null;
+        #[Column(nullable: true)]
+        private ?string $locale = null;
+
+        // ── Roles (Many-to-Many) ──────────────────────────────────────────────
+        // A user can hold multiple roles; permissions are resolved from all of them
+        // plus any parent roles (hierarchical inheritance).
+
+        #[ManyToMany(targetEntity: RoleEntity::class, inversedBy: "users")]
+        #[JoinTable(name: "authentication_user_roles")]
+        #[JoinColumn(name: "user_id", referencedColumnName: "id")]
+        #[InverseJoinColumn(name: "role_id", referencedColumnName: "id")]
+        private Collection $roles;
+
+        // ── Direct permissions (Many-to-Many) ─────────────────────────────────
+        // Fine-grained control: grant individual permissions without a role.
+
+        #[ManyToMany(targetEntity: PermissionEntity::class)]
+        #[JoinTable(name: "authentication_user_permissions")]
+        #[JoinColumn(name: "user_id", referencedColumnName: "id")]
+        #[InverseJoinColumn(name: "permission_id", referencedColumnName: "id")]
+        private Collection $directPermissions;
 
         #[OneToMany(targetEntity: TokenEntity::class, mappedBy: "user", cascade: ["persist", "remove"], orphanRemoval: true)]
         private Collection $tokens;
@@ -65,18 +87,22 @@ namespace Temant\AuthManager\Entity {
         #[OneToMany(targetEntity: AttemptEntity::class, mappedBy: "user", cascade: ["persist", "remove"], orphanRemoval: true)]
         private Collection $attempts;
 
-        #[Column(name: 'updated_at', type: "datetime", nullable: true)]
-        private ?DateTimeInterface $updatedAt = null;
-
         #[OneToOne(targetEntity: ProfileEntity::class, mappedBy: "user", cascade: ["persist", "remove"], orphanRemoval: true)]
         private ?ProfileEntity $profile = null;
 
+        #[OneToOne(targetEntity: TwoFactorEntity::class, mappedBy: "user", cascade: ["persist", "remove"], orphanRemoval: true)]
+        private ?TwoFactorEntity $twoFactor = null;
+
         public function __construct()
         {
-            $this->createdAt = new DateTime();
-            $this->tokens = new ArrayCollection;
-            $this->attempts = new ArrayCollection;
+            $this->createdAt        = new DateTime();
+            $this->tokens           = new ArrayCollection();
+            $this->attempts         = new ArrayCollection();
+            $this->roles            = new ArrayCollection();
+            $this->directPermissions = new ArrayCollection();
         }
+
+        // ── Identity ─────────────────────────────────────────────────────────
 
         public function getId(): int
         {
@@ -118,7 +144,16 @@ namespace Temant\AuthManager\Entity {
 
         public function getFullName(): string
         {
-            return sprintf("%s %s", $this->firstName, $this->lastName);
+            return sprintf('%s %s', $this->firstName, $this->lastName);
+        }
+
+        public function getInitials(): string
+        {
+            return sprintf(
+                '%s%s',
+                strtoupper(substr($this->firstName, 0, 1)),
+                strtoupper(substr($this->lastName, 0, 1))
+            );
         }
 
         public function getEmail(): string
@@ -143,6 +178,8 @@ namespace Temant\AuthManager\Entity {
             return $this;
         }
 
+        // ── Account status ────────────────────────────────────────────────────
+
         public function getIsActivated(): bool
         {
             return $this->isActivated;
@@ -165,6 +202,8 @@ namespace Temant\AuthManager\Entity {
             return $this;
         }
 
+        // ── Timestamps ────────────────────────────────────────────────────────
+
         public function getCreatedAt(): DateTimeInterface
         {
             return $this->createdAt;
@@ -175,6 +214,173 @@ namespace Temant\AuthManager\Entity {
             $this->createdAt = $createdAt;
             return $this;
         }
+
+        public function getUpdatedAt(): ?DateTimeInterface
+        {
+            return $this->updatedAt;
+        }
+
+        public function setUpdatedAt(?DateTimeInterface $updatedAt): self
+        {
+            $this->updatedAt = $updatedAt;
+            return $this;
+        }
+
+        #[PrePersist]
+        #[PreUpdate]
+        public function updateTimestamps(): void
+        {
+            $this->updatedAt = new DateTime();
+            if (!isset($this->createdAt)) {
+                $this->createdAt = new DateTime();
+            }
+        }
+
+        // ── Locale ────────────────────────────────────────────────────────────
+
+        public function getLocale(): ?string
+        {
+            return $this->locale;
+        }
+
+        public function setLocale(?string $locale): self
+        {
+            $this->locale = $locale;
+            return $this;
+        }
+
+        // ── Roles ─────────────────────────────────────────────────────────────
+
+        public function getRoles(): Collection
+        {
+            return $this->roles;
+        }
+
+        public function addRole(RoleEntity $role): self
+        {
+            if (!$this->roles->contains($role)) {
+                $this->roles[] = $role;
+            }
+            return $this;
+        }
+
+        public function removeRole(RoleEntity $role): self
+        {
+            $this->roles->removeElement($role);
+            return $this;
+        }
+
+        public function hasRole(string $roleName): bool
+        {
+            return $this->roles->exists(
+                static fn($key, RoleEntity $role): bool => $role->getName() === $roleName
+            );
+        }
+
+        // ── Permissions ───────────────────────────────────────────────────────
+
+        public function getDirectPermissions(): Collection
+        {
+            return $this->directPermissions;
+        }
+
+        public function addDirectPermission(PermissionEntity $permission): self
+        {
+            if (!$this->directPermissions->contains($permission)) {
+                $this->directPermissions[] = $permission;
+            }
+            return $this;
+        }
+
+        public function removeDirectPermission(PermissionEntity $permission): self
+        {
+            $this->directPermissions->removeElement($permission);
+            return $this;
+        }
+
+        /**
+         * Returns the deduplicated union of:
+         *   • direct permissions assigned to this user, and
+         *   • permissions from every assigned role (recursively through parent roles).
+         *
+         * @return PermissionEntity[]
+         */
+        public function listPermissions(): array
+        {
+            /** @var array<string, PermissionEntity> $map */
+            $map = [];
+
+            foreach ($this->directPermissions as $permission) {
+                $map[$permission->getName()] = $permission;
+            }
+
+            foreach ($this->roles as $role) {
+                foreach ($this->collectRolePermissions($role) as $permission) {
+                    $map[$permission->getName()] = $permission;
+                }
+            }
+
+            return array_values($map);
+        }
+
+        /**
+         * Returns true when the user holds the named permission either directly
+         * or via any assigned role (including inherited parent-role permissions).
+         */
+        public function hasPermission(string $permissionName): bool
+        {
+            // Direct check
+            foreach ($this->directPermissions as $permission) {
+                if ($permission->getName() === $permissionName) {
+                    return true;
+                }
+            }
+
+            // Role-based check (with hierarchy)
+            foreach ($this->roles as $role) {
+                foreach ($this->collectRolePermissions($role) as $permission) {
+                    if ($permission->getName() === $permissionName) {
+                        return true;
+                    }
+                }
+            }
+
+            return false;
+        }
+
+        /** Recursively gathers all permissions from a role and its ancestor chain. */
+        private function collectRolePermissions(RoleEntity $role): array
+        {
+            $permissions = $role->getPermissions()->toArray();
+            $parent      = $role->getParent();
+            if ($parent !== null) {
+                $permissions = array_merge($permissions, $this->collectRolePermissions($parent));
+            }
+            return $permissions;
+        }
+
+        // ── Two-factor authentication ─────────────────────────────────────────
+
+        public function getTwoFactor(): ?TwoFactorEntity
+        {
+            return $this->twoFactor;
+        }
+
+        public function setTwoFactor(?TwoFactorEntity $twoFactor): self
+        {
+            $this->twoFactor = $twoFactor;
+            return $this;
+        }
+
+        /** Returns true only when 2FA has been set up, enabled, AND confirmed. */
+        public function isTwoFactorEnabled(): bool
+        {
+            return $this->twoFactor !== null
+                && $this->twoFactor->isEnabled()
+                && $this->twoFactor->isConfirmed();
+        }
+
+        // ── Tokens ────────────────────────────────────────────────────────────
 
         public function getTokens(): Collection
         {
@@ -195,6 +401,8 @@ namespace Temant\AuthManager\Entity {
             return $this->tokens->removeElement($token);
         }
 
+        // ── Attempts ─────────────────────────────────────────────────────────
+
         public function getAttempts(): Collection
         {
             return $this->attempts;
@@ -214,61 +422,7 @@ namespace Temant\AuthManager\Entity {
             return $this->attempts->removeElement($attempt);
         }
 
-        public function getRole(): ?RoleEntity
-        {
-            return $this->role;
-        }
-
-        public function setRole(?RoleEntity $role): self
-        {
-            $this->role = $role;
-            return $this;
-        }
-
-        public function listPermissions(): array
-        {
-            return $this->role->getPermissions()->toArray();
-        }
-
-        public function hasPermission(string $permissionName): bool
-        {
-            return $this->role
-                ->getPermissions()
-                ->exists(fn($key, $permission): bool => $permission->getName() === $permissionName);
-        }
-
-        public function getLocale(): ?string
-        {
-            return $this->locale;
-        }
-
-        public function setLocale(?string $locale): self
-        {
-            $this->locale = $locale;
-            return $this;
-        }
-
-        #[PrePersist]
-        #[PreUpdate]
-        public function updateTimestamps(): void
-        {
-            $this->updatedAt = new DateTime();
-
-            if ($this->createdAt === null) {
-                $this->createdAt = new DateTime();
-            }
-        }
-
-        public function getUpdatedAt(): ?DateTimeInterface
-        {
-            return $this->updatedAt;
-        }
-
-        public function setUpdatedAt(?DateTimeInterface $updatedAt): self
-        {
-            $this->updatedAt = $updatedAt;
-            return $this;
-        }
+        // ── Profile ───────────────────────────────────────────────────────────
 
         public function getProfile(): ?ProfileEntity
         {
@@ -277,25 +431,14 @@ namespace Temant\AuthManager\Entity {
 
         public function setProfile(?ProfileEntity $profile): self
         {
-            // unset the owning side of the relation if necessary
             if ($profile === null && $this->profile !== null) {
                 $this->profile->setUser(null);
             }
-
-            // set the owning side of the relation if necessary
             if ($profile !== null && $profile->getUser() !== $this) {
                 $profile->setUser($this);
             }
-
             $this->profile = $profile;
             return $this;
-        }
-
-        public function getInitials(): string
-        {
-            $firstInitial = strtoupper(substr($this->firstName, 0, 1));
-            $lastInitial = strtoupper(substr($this->lastName, 0, 1));
-            return sprintf("%s%s", $firstInitial, $lastInitial);
         }
     }
 }

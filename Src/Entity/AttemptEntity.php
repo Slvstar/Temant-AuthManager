@@ -12,6 +12,9 @@ namespace Temant\AuthManager\Entity {
     use Doctrine\ORM\Mapping\ManyToOne;
     use Doctrine\ORM\Mapping\Table;
 
+    /**
+     * Records a single authentication attempt for audit and rate-limiting purposes.
+     */
     #[Entity]
     #[Table(name: "authentication_attempts")]
     class AttemptEntity
@@ -29,7 +32,15 @@ namespace Temant\AuthManager\Entity {
         private bool $success;
 
         #[Column(nullable: true)]
-        private ?string $reason = null; 
+        private ?string $reason = null;
+
+        /** Client IP address at the time of the attempt (IPv4 or IPv6). */
+        #[Column(name: "ip_address", length: 45, nullable: true)]
+        private ?string $ipAddress = null;
+
+        /** User-Agent header sent by the client browser or API consumer. */
+        #[Column(name: "user_agent", type: "text", nullable: true)]
+        private ?string $userAgent = null;
 
         #[Column(name: "created_at", type: "datetime")]
         private DateTimeInterface $createdAt;
@@ -64,7 +75,29 @@ namespace Temant\AuthManager\Entity {
         {
             $this->reason = $reason;
             return $this;
-        } 
+        }
+
+        public function getIpAddress(): ?string
+        {
+            return $this->ipAddress;
+        }
+
+        public function setIpAddress(?string $ipAddress): self
+        {
+            $this->ipAddress = $ipAddress;
+            return $this;
+        }
+
+        public function getUserAgent(): ?string
+        {
+            return $this->userAgent;
+        }
+
+        public function setUserAgent(?string $userAgent): self
+        {
+            $this->userAgent = $userAgent;
+            return $this;
+        }
 
         public function getCreatedAt(): DateTimeInterface
         {

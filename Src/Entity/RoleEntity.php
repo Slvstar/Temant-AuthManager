@@ -12,9 +12,17 @@ namespace Temant\AuthManager\Entity {
     use Doctrine\ORM\Mapping\JoinColumn;
     use Doctrine\ORM\Mapping\JoinTable;
     use Doctrine\ORM\Mapping\ManyToMany;
+    use Doctrine\ORM\Mapping\ManyToOne;
     use Doctrine\ORM\Mapping\OneToMany;
     use Doctrine\ORM\Mapping\Table;
 
+    /**
+     * Represents a named role that can be assigned to users.
+     *
+     * Roles form an optional hierarchy: a role can inherit all permissions from
+     * its parent role.  Circular hierarchies are not enforced at the ORM level
+     * and should be avoided in application logic.
+     */
     #[Entity]
     #[Table(name: "authentication_roles")]
     class RoleEntity
@@ -28,9 +36,22 @@ namespace Temant\AuthManager\Entity {
         private string $name;
 
         #[Column(nullable: true)]
-        private ?string $description;
+        private ?string $description = null;
 
-        #[OneToMany(targetEntity: UserEntity::class, mappedBy: "role")]
+        // ── Role hierarchy ────────────────────────────────────────────────────
+
+        /** Parent role — this role inherits all of the parent's permissions. */
+        #[ManyToOne(targetEntity: self::class, inversedBy: "children")]
+        #[JoinColumn(name: "parent_id", referencedColumnName: "id", nullable: true, onDelete: "SET NULL")]
+        private ?RoleEntity $parent = null;
+
+        #[OneToMany(targetEntity: self::class, mappedBy: "parent")]
+        private Collection $children;
+
+        // ── Relationships ─────────────────────────────────────────────────────
+
+        /** Inverse side of the User ↔ Role Many-to-Many. */
+        #[ManyToMany(targetEntity: UserEntity::class, mappedBy: "roles")]
         private Collection $users;
 
         #[ManyToMany(targetEntity: PermissionEntity::class, inversedBy: "roles")]
@@ -42,8 +63,11 @@ namespace Temant\AuthManager\Entity {
         public function __construct()
         {
             $this->permissions = new ArrayCollection();
-            $this->users = new ArrayCollection();
+            $this->users       = new ArrayCollection();
+            $this->children    = new ArrayCollection();
         }
+
+        // ── Getters / Setters ─────────────────────────────────────────────────
 
         public function getId(): int
         {
@@ -72,29 +96,32 @@ namespace Temant\AuthManager\Entity {
             return $this;
         }
 
+        // ── Hierarchy ─────────────────────────────────────────────────────────
+
+        public function getParent(): ?RoleEntity
+        {
+            return $this->parent;
+        }
+
+        public function setParent(?RoleEntity $parent): self
+        {
+            $this->parent = $parent;
+            return $this;
+        }
+
+        public function getChildren(): Collection
+        {
+            return $this->children;
+        }
+
+        // ── Users ─────────────────────────────────────────────────────────────
+
         public function getUsers(): Collection
         {
             return $this->users;
         }
 
-        public function addUser(UserEntity $user): self
-        {
-            if (!$this->users->contains($user)) {
-                $this->users[] = $user;
-                $user->setRole($this);
-            }
-            return $this;
-        }
-
-        public function removeUser(UserEntity $user): self
-        {
-            if ($this->users->removeElement($user)) {
-                if ($user->getRole() === $this) {
-                    $user->setRole(null);
-                }
-            }
-            return $this;
-        }
+        // ── Permissions ───────────────────────────────────────────────────────
 
         public function getPermissions(): Collection
         {
@@ -116,6 +143,31 @@ namespace Temant\AuthManager\Entity {
                 $permission->removeRole($this);
             }
             return $this;
+        }
+
+        /**
+         * Returns this role's own permissions plus all permissions inherited from
+         * ancestor roles (full hierarchy traversal).
+         *
+         * @return PermissionEntity[]
+         */
+        public function getAllPermissions(): array
+        {
+            $permissions = $this->permissions->toArray();
+            if ($this->parent !== null) {
+                $permissions = array_merge($permissions, $this->parent->getAllPermissions());
+            }
+            return $permissions;
+        }
+
+        public function hasPermission(string $permissionName): bool
+        {
+            foreach ($this->getAllPermissions() as $permission) {
+                if ($permission->getName() === $permissionName) {
+                    return true;
+                }
+            }
+            return false;
         }
     }
 }

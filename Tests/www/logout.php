@@ -1,7 +1,9 @@
 <?php declare(strict_types=1);
 
-include_once __DIR__ . "/../Bootstrap.php";
+require_once __DIR__ . '/../Bootstrap.php';
+require_once __DIR__ . '/_helpers.php';
 
-if ($authManager->deauthenticate()) {
-    exit(header("Location:index.php"));
-}
+$authManager->deauthenticate();
+flash('success', 'You have been signed out successfully.');
+header('Location: login.php');
+exit;
