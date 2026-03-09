@@ -81,7 +81,7 @@ try {
         'host' => 'localhost',
         'user' => 'root',
         'password' => '',
-        'dbname' => 'authy',
+        'dbname' => 'temant-authmanager',
         'charset' => 'utf8mb4',
         'driverOptions' => [
             PDO::ATTR_STRINGIFY_FETCHES => false,
