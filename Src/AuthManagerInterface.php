@@ -36,6 +36,15 @@ interface AuthManagerInterface
 
     public function removeUser(UserEntity $user): void;
 
+    // __ Helper methods for registration/login flows (not part of the public API)
+    /**
+     * Generates a unique username based on the user's first and last name.
+     * @param string $firstName The user's first name (e.g. "John").
+     * @param string $lastName The user's last name (e.g. "Doe").
+     * @return string A unique username (e.g. "John.D")
+     */
+    public function generateUserName(string $firstName, string $lastName): string;
+
     // ── Authentication ────────────────────────────────────────────────────────
 
     /**

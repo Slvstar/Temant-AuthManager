@@ -29,6 +29,9 @@ namespace Temant\AuthManager\Entity {
         #[Column(nullable: true)]
         private ?string $description = null;
 
+        #[Column(name: 'is_global', type: 'boolean', options: ['default' => false])]
+        private bool $isGlobal = false;
+
         /** Roles that include this permission (inverse side of the Role ↔ Permission M2M). */
         #[ManyToMany(targetEntity: RoleEntity::class, mappedBy: "permissions")]
         private Collection $roles;
@@ -62,6 +65,17 @@ namespace Temant\AuthManager\Entity {
         public function setDescription(?string $description): self
         {
             $this->description = $description;
+            return $this;
+        }
+
+        public function isGlobal(): bool
+        {
+            return $this->isGlobal;
+        }
+
+        public function setGlobal(bool $isGlobal): self
+        {
+            $this->isGlobal = $isGlobal;
             return $this;
         }
 

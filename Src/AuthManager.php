@@ -841,7 +841,10 @@ final class AuthManager implements AuthManagerInterface
         return $tokenEntity?->getUser();
     }
 
-    private function generateUserName(string $firstName, string $lastName): string
+    /**
+     * @inheritDoc
+     */
+    public function generateUserName(string $firstName, string $lastName): string
     {
         $base      = sprintf('%s.%s', ucfirst($firstName), ucfirst(substr($lastName, 0, 1)));
         $all       = array_map(
