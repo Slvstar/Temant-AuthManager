@@ -11,7 +11,7 @@ namespace Temant\AuthManager\Entity {
     use Doctrine\ORM\Mapping\Table;
 
     #[Entity]
-    #[Table(name: 'user_profiles')]
+    #[Table(name: 'authentication_user_profile')]
     class ProfileEntity
     {
         #[Id]
