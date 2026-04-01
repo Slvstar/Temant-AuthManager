@@ -256,6 +256,12 @@ interface AuthManagerInterface
     /** @return PermissionEntity[] */
     public function listAllPermissions(): array;
 
+    /**
+     * Checks if a user has a permission — including global permissions
+     * that apply to all authenticated users regardless of assignment.
+     */
+    public function userHasPermission(UserEntity $user, string $permissionName): bool;
+
     // ── Settings ──────────────────────────────────────────────────────────────
 
     /** @return SettingEntity[] */

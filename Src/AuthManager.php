@@ -760,6 +760,24 @@ final class AuthManager implements AuthManagerInterface
         return $this->entityManager->getRepository(RoleEntity::class)->findAll();
     }
 
+    /**
+     * Checks if a user has a permission — including global permissions
+     * that apply to all authenticated users regardless of assignment.
+     */
+    public function userHasPermission(UserEntity $user, string $permissionName): bool
+    {
+        // 1. Check direct + role-based permissions on the entity
+        if ($user->hasPermission($permissionName)) {
+            return true;
+        }
+
+        // 2. Check if the permission is marked as global (applies to everyone)
+        $perm = $this->entityManager->getRepository(PermissionEntity::class)
+            ->findOneBy(['name' => $permissionName, 'isGlobal' => true]);
+
+        return $perm !== null;
+    }
+
     public function listAllPermissions(): array
     {
         return $this->entityManager->getRepository(PermissionEntity::class)->findAll();
